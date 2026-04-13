@@ -18,9 +18,9 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: {
     template: "%s | GateMan",
-    default: "GateMan | Smart Estate Security & Management",
+    default: "GateMan | Super Admin",
   },
-  description: "Advanced access control and estate management for modern communities.",
+  description: "Master access control.",
   // manifest: "/manifest.json", 
   // icons: {
   //   icon: "/favicon.ico",
