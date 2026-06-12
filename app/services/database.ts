@@ -9,14 +9,14 @@ export const db = {
   authenticate: async (
     email: string,
     password: string,
-    name: string,
+    rememberMe: boolean,
   ) => {
     try {
       const res = await fetch("/api/auth/login/super-admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // Added 'name' as the required signature
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, rememberMe }),
         credentials: "include",
       });
 
@@ -26,7 +26,7 @@ export const db = {
       }
 
       const data = await res.json();
-      return data; // returns { success: true, user: { ... }, sessionId: "..." }
+      return data; 
     } catch (err: any) {
       return {
         success: false,

@@ -3,11 +3,6 @@
 import React, { useState } from "react";
 import {
   Home,
-  Zap,
-  ShieldCheck,
-  MessageSquare,
-  Calendar,
-  Users,
   ChevronDown,
   LogOut,
   Inbox,
@@ -17,6 +12,7 @@ import { ViewState } from "../services/types";
 import { useUser } from "../UserContext";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
+import { postLogout } from "../services/apis";
 
 interface SideBarProps {
   isOpen?: boolean;
@@ -36,8 +32,11 @@ export default function SideBar({
   const router = useRouter();
   const pathname = usePathname();
 
-  const handleLogout = () => {
+  const handleLogout = async() => {
     setUser(null);
+    await postLogout();
+    localStorage.removeItem("rememberMe");
+    sessionStorage.setItem("loggedOut", "true");
     router.push("/");
   };
 

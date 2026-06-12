@@ -1,26 +1,66 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  Users,
-  TrendingUp,
-  ShieldCheck,
-  ChevronRight,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Users, TrendingUp, ShieldCheck, ChevronRight } from "lucide-react";
 import { useUser } from "../UserContext";
 import { useRouter } from "next/navigation";
-
+import toast from "react-hot-toast";
 
 export default function SuperAdminDashboard() {
   const { user } = useUser();
   const router = useRouter();
-  
+
+  useEffect(() => {
+    const checkPasswordWarningStatus = localStorage.getItem(
+      "DASHBOARD_PASS_WARN",
+    );
+
+    if (checkPasswordWarningStatus === "true") {
+      // Drop your custom toast modal notification warning window banner
+      toast(
+        (t) => (
+          <div className="flex flex-col gap-2 p-1">
+            <p className="font-sans font-bold text-slate-900 text-sm">
+              Initial Login Setup Detected
+            </p>
+            <p className="text-xs text-slate-500 font-medium">
+              You are currently accessing the system using a temporary access
+              credential. For maximum system protection, please configure a new
+              secret password.
+            </p>
+            <div className="flex gap-2 justify-end mt-1">
+              <button
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  localStorage.removeItem("DASHBOARD_PASS_WARN");
+                }}
+                className="px-3 py-1.5 text-[10px] font-oswald font-black text-slate-400 hover:text-slate-600 uppercase"
+              >
+                Later
+              </button>
+              <button
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  localStorage.removeItem("DASHBOARD_PASS_WARN");
+                  window.location.href = "/home/settings/change-password";
+                }}
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-oswald font-black uppercase shadow-sm"
+              >
+                Update Now
+              </button>
+            </div>
+          </div>
+        ),
+        { duration: Infinity, position: "top-center" }, // Infinity prevents it from fading away until dismissed
+      );
+    }
+  }, []);
   // Logic specifically for Super Admin
   const stats = {
     totalEstates: 124,
     pendingEstates: 8,
     activeResidents: "12.5k",
-    platformVolume: "₦4.2M"
+    platformVolume: "₦4.2M",
   };
 
   const formattedBalance = new Intl.NumberFormat("en-NG", {

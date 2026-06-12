@@ -22,6 +22,18 @@ export const checkSession = async (): Promise<sessionResponse> => {
   }
 };
 
+export const postLogout = async () => {
+  const res = await fetch('/api/logout', {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+
+  const data = await res.json();
+
+  return data;
+};
+
 export const sendOtpApi = async (email: string) => {
   try {
     const res = await fetch("/api/auth/otp/send", {
@@ -32,6 +44,19 @@ export const sendOtpApi = async (email: string) => {
     return await res.json();
   } catch (err) {
     console.log("OTP error:", err);
+    return { success: false, message: "Network error" };
+  }
+};
+
+export const sendPofileChangeOtpApi = async (target: string, type: string) => {
+  try {
+    const res = await fetch("/api/master/send-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target, type }),
+    });
+    return await res.json();
+  } catch (err) {
     return { success: false, message: "Network error" };
   }
 };
@@ -94,6 +119,62 @@ export const fetchReadableAddress = async (locationData: string) => {
   } catch (error) {
     console.error("❌ Error fetching address:", error);
     return locationData; // Return the raw coordinates if anything fails
+  }
+};
+
+export const getCloudinaryUrl = async (
+  file: File, // Pass the native Browser File object directly here instead of a string URI
+  selectionType: "image" | "audio" | "video" | "document",
+) => {
+  try {
+    // 1. SIZE CHECK: 50MB Limit using native browser File properties
+    if (!file) {
+      console.error("No file provided for upload.");
+      return null;
+    }
+
+    const fileSize = file.size;
+    const MAX_SIZE = 50 * 1024 * 1024;
+
+    if (fileSize > MAX_SIZE) {
+      alert("File too large. Max limit is 50MB.");
+      return null;
+    }
+
+    const formData = new FormData();
+
+    // 2. Resource Type Logic
+    let cloudinaryType = "image";
+
+    if (selectionType === "audio" || selectionType === "video") {
+      cloudinaryType = "video"; // Cloudinary treats audio as a video resource type
+    } else if (selectionType === "document") {
+      cloudinaryType = "raw";
+    }
+
+    // Standard web browsers natively know how to read and stream the File object via FormData
+    formData.append("file", file);
+    formData.append("upload_preset", "gateman uploads");
+
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/diubaoqcr/${cloudinaryType}/upload`,
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
+
+    const data = await res.json();
+
+    if (data.error) {
+      console.error("Cloudinary Error:", data.error.message);
+      return null;
+    }
+
+    return data.secure_url;
+  } catch (err) {
+    console.error("Upload Logic Error:", err);
+    return null;
   }
 };
 

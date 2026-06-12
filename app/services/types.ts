@@ -6,8 +6,11 @@ export interface User {
   id: string;
   full_name: string;
   email: string;
+  phone_number: string;
   role: "SUPER_ADMIN";
   wallet_balance: number;
+  mfa_enabled: boolean;
+  mfa_type: string;
 
   permissions: {
     all_access: boolean;
