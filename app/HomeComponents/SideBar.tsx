@@ -7,6 +7,7 @@ import {
   LogOut,
   Inbox,
   User2,
+  Users,
 } from "lucide-react";
 import { ViewState } from "../services/types";
 import { useUser } from "../UserContext";
@@ -55,8 +56,8 @@ export default function SideBar({
     },
     {
       id: ViewState.ADD_USER,
-      label: "Add User",
-      icon: Inbox,
+      label: "Users",
+      icon: Users,
       url: "/home/add_user",
     },
     {

@@ -1,28 +1,27 @@
 "use client";
 
-import React, { useState } from "react";
-import { QRCodeSVG } from "qrcode.react"; 
+import React, { useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { ShieldCheck, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
-
 
 interface TotpMfaSetupProps {
   onComplete: () => void;
 }
 
-export default function TotpMfaSetupComponent({ onComplete }: TotpMfaSetupProps) {
+export default function TotpMfaSetupComponent({
+  onComplete,
+}: TotpMfaSetupProps) {
   const [loading, setLoading] = useState(false);
-  const [verificationLoading, setVerificationLoading] = useState(false);
+  const [verificationLoading, setVerificationLoading] = useState(false); // 👈 Linked below
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-//   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // State from Backend response
   const [tempSecret, setTempSecret] = useState<string | null>(null);
   const [qrCodeUri, setQrCodeUri] = useState<string | null>(null);
-
-  // User Verification Input Code
-  const [verificationCode, setVerificationCode] = useState("");
 
   // Step 1: Tell backend to generate a fresh secret
   const handleInitiateMfa = async () => {
@@ -47,23 +46,67 @@ export default function TotpMfaSetupComponent({ onComplete }: TotpMfaSetupProps)
     }
   };
 
-  // Step 2: Validate the user's first generated app code
-  const handleVerifyAndActivate = async (e: React.FormEvent) => {
+  const handleOtpChange = (value: string, index: number) => {
+    const cleanValue = value.replace(/[^0-9]/g, "").slice(-1);
+    const newOtp = [...otp];
+    newOtp[index] = cleanValue;
+    setOtp(newOtp);
+
+    if (cleanValue && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+
+    const finalOtpString = newOtp.join("");
+    if (finalOtpString.length === 6) {
+      handleVerifyAndActivate(finalOtpString);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      const newOtp = [...otp];
+      newOtp[index - 1] = ""; // Clear out preceding block cleanly
+      setOtp(newOtp);
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  // Modern Clipboard Interception Flow
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (!verificationCode || verificationCode.length !== 6) {
+    const pastedData = e.clipboardData.getData("text").trim();
+
+    if (/^\d{6}$/.test(pastedData)) {
+      const pastedArray = pastedData.split("");
+      setOtp(pastedArray);
+      inputRefs.current[5]?.focus();
+      handleVerifyAndActivate(pastedData);
+    } else {
+      toast.error("Please paste a valid 6-digit numeric token.");
+    }
+  };
+
+  const handleCancelOtp = () => {
+    setOtp(["", "", "", "", "", ""]);
+    setError(null);
+  };
+
+  // Step 2: Validate the user's first generated app code
+  const handleVerifyAndActivate = async (tokenString: string) => {
+    if (!tokenString || tokenString.length !== 6) {
       setError("Please enter a valid 6-digit code.");
       return;
     }
 
-    setVerificationLoading(true);
+    setVerificationLoading(true); // 👈 Toggles on state wrapper
     setError(null);
 
     try {
-      const res = await fetch("/api/master/mfa/verify-setup", {
+      const res = await fetch("/api/master/mfa/verify-totp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          token: verificationCode,
+          token: tokenString,
           secret: tempSecret,
         }),
       });
@@ -73,17 +116,22 @@ export default function TotpMfaSetupComponent({ onComplete }: TotpMfaSetupProps)
         setSuccess(true);
         setTempSecret(null);
         setQrCodeUri(null);
+        toast.success("MFA synchronization verified completely!");
 
-        onComplete();
+        setTimeout(() => {
+          onComplete();
+        }, 800);
       } else {
         setError(data.message || "Invalid code matrix mismatch.");
         toast.error(data.message || "Invalid code matrix mismatch.");
+        setOtp(["", "", "", "", "", ""]); // Reset layout values on mismatch error
+        inputRefs.current[0]?.focus();
       }
     } catch (err) {
       setError("Verification failed.");
       toast.error("Verification failed.");
     } finally {
-      setVerificationLoading(false);
+      setVerificationLoading(false); // 👈 Shuts off state wrapper
     }
   };
 
@@ -139,7 +187,6 @@ export default function TotpMfaSetupComponent({ onComplete }: TotpMfaSetupProps)
       {qrCodeUri && (
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex justify-center">
-            {/* Render the scannable URI string as a clean vector QR image */}
             <QRCodeSVG
               value={qrCodeUri}
               size={200}
@@ -154,8 +201,8 @@ export default function TotpMfaSetupComponent({ onComplete }: TotpMfaSetupProps)
               Authy, etc.).
             </p>
             <p>
-              2. Tap the scan button and clear focus on the code grid window
-              image shown above.
+              2. Tap the scan button and focus on the code grid QR window image
+              shown above.
             </p>
             <p>
               3. Enter the changing 6-digit confirmation key below to link
@@ -163,31 +210,52 @@ export default function TotpMfaSetupComponent({ onComplete }: TotpMfaSetupProps)
             </p>
           </div>
 
-          <form onSubmit={handleVerifyAndActivate} className="space-y-4">
-            <input
-              type="text"
-              maxLength={6}
-              inputMode="numeric"
-              placeholder="000000"
-              value={verificationCode}
-              onChange={(e) =>
-                setVerificationCode(e.target.value.replace(/\D/g, ""))
-              }
-              className="w-full tracking-widest text-center text-2xl font-bold bg-slate-50 border border-slate-100 py-3 rounded-2xl focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all outline-none"
-            />
-
-            <button
-              type="submit"
-              disabled={verificationLoading}
-              className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold tracking-wide transition-all shadow-md flex items-center justify-center disabled:opacity-50"
+          <div className="flex flex-col">
+            {/* Added onPaste handler container */}
+            <div
+              className="flex justify-between gap-2 mb-6"
+              onPaste={handlePaste}
             >
-              {verificationLoading ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                "Confirm & Save Configuration"
+              {otp.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={(el) => {
+                    inputRefs.current[index] = el;
+                  }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  disabled={verificationLoading}
+                  value={digit}
+                  onChange={(e) => handleOtpChange(e.target.value, index)}
+                  onKeyDown={(e) => handleKeyDown(e, index)}
+                  className="w-12 h-14 text-center text-xl font-bold bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-gm-charcoal focus:ring-4 focus:ring-indigo-50 outline-none transition-all disabled:opacity-50"
+                />
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              {/* Swapped token state references to verificationLoading */}
+              {verificationLoading && (
+                <div className="w-full py-3 bg-slate-100 rounded-2xl flex items-center justify-center gap-2 text-xs font-sans font-bold text-slate-500">
+                  <Loader2
+                    className="animate-spin text-gm-charcoal"
+                    size={16}
+                  />
+                  Validating Core Secrets...
+                </div>
               )}
-            </button>
-          </form>
+
+              {!verificationLoading && (
+                <button
+                  onClick={handleCancelOtp}
+                  className="w-full py-2 text-slate-400 font-medium hover:text-slate-600 text-xs transition-colors"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

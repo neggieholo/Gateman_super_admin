@@ -42,7 +42,7 @@ export default function SuperAdminDashboard() {
                 onClick={() => {
                   toast.dismiss(t.id);
                   localStorage.removeItem("DASHBOARD_PASS_WARN");
-                  window.location.href = "/home/settings/change-password";
+                  window.location.href = "/home/change-password";
                 }}
                 className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-oswald font-black uppercase shadow-sm"
               >

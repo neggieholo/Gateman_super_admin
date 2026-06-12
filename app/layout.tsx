@@ -50,7 +50,6 @@ export default function RootLayout({
       <body className="antialiased">
         <UserProvider>
           {children}
-          npm install react-hot-toast
           <Toaster
             position="top-right"
             toastOptions={{

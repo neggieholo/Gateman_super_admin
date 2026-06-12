@@ -50,6 +50,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [verifyingField, setVerifyingField] = useState<
     "email" | "phone" | "mfa_email" | null
@@ -201,7 +202,7 @@ export default function Settings() {
           : profile.phone;
       const apiType = verifyingField === "mfa_email" ? "email" : verifyingField;
 
-      const res = await fetch(`${baseUrl}/api/admin/verify-otp-only`, {
+      const res = await fetch("/api/admin/verify-otp-only", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -234,6 +235,7 @@ export default function Settings() {
         setError(data.message || "Invalid Code");
       }
     } catch (err) {
+      console.log(err)
       setError("Verification failed");
     } finally {
       setOtpLoading(false);
@@ -298,14 +300,12 @@ export default function Settings() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setProfile((prev) => ({
-        ...prev,
-        avatarUrl: reader.result as string,
-      }));
-    };
-    reader.readAsDataURL(file);
+    const localPreviewUrl = URL.createObjectURL(file);
+
+    setProfile((prev) => ({
+      ...prev,
+      avatarUrl: localPreviewUrl, 
+    }));
 
     setError(null);
     try {
@@ -316,12 +316,24 @@ export default function Settings() {
           ...prev,
           avatarUrl: uploadedUrl,
         }));
+        toast.success("Avatar staged securely!");
       } else {
         toast.error("Avatar upload failed. Reverting changes.");
+        setProfile((prev) => ({
+          ...prev,
+          avatarUrl: user?.avatar_url || undefined,
+        }));
       }
     } catch (err) {
       console.error("Avatar handling layout exception:", err);
       toast.error("An error occurred during image staging execution.");
+      setProfile((prev) => ({
+        ...prev,
+        avatarUrl: user?.avatar_url || undefined,
+      }));
+    } finally {
+      // Clean up the local browser object memory leak loop safely
+      URL.revokeObjectURL(localPreviewUrl);
     }
   };
 
@@ -353,7 +365,7 @@ export default function Settings() {
 
   if (displayTotpActivator) {
     return (
-      <div className="relative flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-w-4xl mx-auto h-[calc(100vh-120px)] bg-slate-50/50 font-sans">
+      <div className="relative flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 h-[calc(100vh-120px)] bg-slate-50/50 font-sans">
         <h1 className="text-2xl font-montserrat font-black text-slate-900 tracking-tight">
           Security Safeguards
         </h1>
@@ -415,10 +427,14 @@ export default function Settings() {
             <div className="flex flex-col md:flex-row gap-6 items-start">
               {/* Top Left Workspace: Avatar / Initials Layout Block */}
               <div className="w-full md:w-1/4 flex flex-col items-center justify-center p-4 bg-slate-50 rounded-3xl border border-slate-100 shrink-0">
-                <div className="relative w-24 h-24 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-montserrat font-bold text-3xl tracking-wide shadow-inner overflow-hidden group">
+                <div
+                  className="relative w-24 h-24 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-montserrat font-bold text-3xl tracking-wide shadow-inner overflow-hidden group"
+                  onClick={() => fileInputRef.current?.click()}
+                >
                   {profile.avatarUrl ? (
                     <img
                       src={profile.avatarUrl}
+                      crossOrigin="anonymous"
                       alt="User Profile"
                       className="w-full h-full object-cover"
                     />
@@ -434,6 +450,7 @@ export default function Settings() {
                       <span>Upload</span>
                       <input
                         type="file"
+                        ref={fileInputRef}
                         accept="image/*"
                         onChange={handleAvatarChange}
                         className="hidden"
@@ -673,9 +690,7 @@ export default function Settings() {
         <div className="space-y-6">
           <div className="bg-white p-5 sm:p-6 rounded-4xl border border-slate-100 shadow-sm space-y-2">
             <button
-              onClick={() =>
-                (window.location.href = "/home/settings/change-password")
-              }
+              onClick={() => (window.location.href = "/home/change-password")}
               className="w-full flex items-center justify-between p-4 hover:bg-slate-50 rounded-2xl transition-colors group"
             >
               <div className="flex items-center gap-3">

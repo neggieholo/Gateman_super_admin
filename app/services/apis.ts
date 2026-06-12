@@ -126,12 +126,13 @@ export const getCloudinaryUrl = async (
   file: File, // Pass the native Browser File object directly here instead of a string URI
   selectionType: "image" | "audio" | "video" | "document",
 ) => {
+  console.log("uploading into cloudinary")
   try {
-    // 1. SIZE CHECK: 50MB Limit using native browser File properties
     if (!file) {
       console.error("No file provided for upload.");
       return null;
     }
+    console.log("uploading into cloudinary:", file);
 
     const fileSize = file.size;
     const MAX_SIZE = 50 * 1024 * 1024;
@@ -170,6 +171,7 @@ export const getCloudinaryUrl = async (
       console.error("Cloudinary Error:", data.error.message);
       return null;
     }
+    console.log("Cloudinary Url", data.secure_url);
 
     return data.secure_url;
   } catch (err) {
