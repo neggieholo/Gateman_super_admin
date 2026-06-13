@@ -1,10 +1,8 @@
 import React from 'react'
-import AddSuperAdmin from '@/app/HomeComponents/AddUser'
+import UsersPage from '@/app/HomeComponents/Users'
 
 const page = () => {
-  return (
-    <AddSuperAdmin />
-  )
+  return <UsersPage />;
 }
 
 export default page

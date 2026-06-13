@@ -7,17 +7,14 @@ export interface User {
   full_name: string;
   email: string;
   phone_number: string;
+  phone_verified: boolean;
+  email_verified: boolean;
   role: "SUPER_ADMIN";
   wallet_balance: number;
   mfa_enabled: boolean;
   mfa_type: string;
 
-  permissions: {
-    all_access: boolean;
-    manage_estates: boolean;
-    manage_finances: boolean;
-    view_audit_logs: boolean;
-  };
+  permissions: string[];
 
   is_active: boolean;
   last_login?: string;
@@ -195,4 +192,32 @@ export interface ActiveEstate {
   admin_name: string;
   admin_email: string;
   admin_status: string;
+}
+
+export interface PermissionNode {
+  id: string;
+  name: string;
+  parent_permission: string | null; 
+}
+
+export interface CustomRoleMapping {
+  id: number;
+  role_name: string;
+  description?: string;
+  permission_ids: string[];
+}
+
+
+// 📝 Interface structure matching your database return schema
+export interface UserLogEntry {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  action_type: string;
+  target_resource: string;
+  description: string;
+  ip_address: string;
+  user_agent:string;
+  created_at: string;
 }

@@ -51,7 +51,11 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
         ),
-        { duration: Infinity, position: "top-center" }, // Infinity prevents it from fading away until dismissed
+        {
+          id: "initial-setup-password-warning",
+          duration: Infinity,
+          position: "top-center",
+        },
       );
     }
   }, []);

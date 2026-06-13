@@ -79,7 +79,7 @@ export default function Settings() {
     avatarUrl: user?.avatar_url || undefined,
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  // const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
   const hasChanges =
     profile.name !== (user?.full_name || "") ||
@@ -108,8 +108,8 @@ export default function Settings() {
         phone: user.phone_number || (isEditing ? "" : undefined),
         mfa_enabled: user.mfa_enabled,
         mfa_type: user.mfa_type,
-        phone_verified: true,
-        email_verified: true,
+        phone_verified: user.phone_verified,
+        email_verified: user.email_verified,
         avatarUrl: user?.avatar_url || undefined,
       });
     }
@@ -235,7 +235,7 @@ export default function Settings() {
         setError(data.message || "Invalid Code");
       }
     } catch (err) {
-      console.log(err)
+      console.log(err);
       setError("Verification failed");
     } finally {
       setOtpLoading(false);
@@ -270,7 +270,7 @@ export default function Settings() {
         phone_number: profile.phone,
         mfa_enabled: profile.mfa_enabled,
         mfa_type: profile.mfa_type,
-        avatar_url: profile.avatarUrl
+        avatar_url: profile.avatarUrl,
       },
     };
 
@@ -304,7 +304,7 @@ export default function Settings() {
 
     setProfile((prev) => ({
       ...prev,
-      avatarUrl: localPreviewUrl, 
+      avatarUrl: localPreviewUrl,
     }));
 
     setError(null);
@@ -428,7 +428,7 @@ export default function Settings() {
               {/* Top Left Workspace: Avatar / Initials Layout Block */}
               <div className="w-full md:w-1/4 flex flex-col items-center justify-center p-4 bg-slate-50 rounded-3xl border border-slate-100 shrink-0">
                 <div
-                  className="relative w-24 h-24 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-montserrat font-bold text-3xl tracking-wide shadow-inner overflow-hidden group"
+                  className="relative w-36 h-36 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-montserrat font-bold text-3xl tracking-wide shadow-inner overflow-hidden group"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   {profile.avatarUrl ? (
@@ -504,17 +504,19 @@ export default function Settings() {
                             Verified
                           </span>
                         </div>
+                      ) : isEditing ? (
+                        <button
+                          onClick={() =>
+                            handleRequestOtp(profile.email, "email")
+                          }
+                          className="bg-amber-500 text-white px-2.5 py-1.5 rounded-xl text-[9px] font-oswald font-black uppercase active:scale-95 transition-transform"
+                        >
+                          Verify
+                        </button>
                       ) : (
-                        isEditing && (
-                          <button
-                            onClick={() =>
-                              handleRequestOtp(profile.email, "email")
-                            }
-                            className="bg-amber-500 text-white px-2.5 py-1.5 rounded-xl text-[9px] font-oswald font-black uppercase active:scale-95 transition-transform"
-                          >
-                            Verify
-                          </button>
-                        )
+                        <div className="bg-red-500 text-white px-2.5 py-1.5 rounded-xl text-[9px] font-oswald font-black uppercase active:scale-95 transition-transform">
+                          Unverified
+                        </div>
                       )}
                     </div>
                   </div>
@@ -522,7 +524,7 @@ export default function Settings() {
 
                 <div className="space-y-1.5 sm:col-span-2">
                   <label className="text-[10px] font-oswald font-black text-slate-400 uppercase tracking-widest">
-                    Phone Connection
+                    Phone
                   </label>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between w-full p-2 bg-slate-50 rounded-2xl border border-transparent focus-within:border-indigo-500 focus-within:bg-white focus-within:shadow-sm transition-all gap-2">
                     {!isEditing && !profile.phone ? (
@@ -551,18 +553,19 @@ export default function Settings() {
                             Verified
                           </span>
                         </div>
+                      ) : isEditing && profile.phone ? (
+                        <button
+                          onClick={() =>
+                            handleRequestOtp(profile.phone!, "phone")
+                          }
+                          className="w-full sm:w-auto bg-amber-500 text-white px-3 py-1.5 rounded-xl text-[9px] font-oswald font-black uppercase active:scale-95 transition-transform"
+                        >
+                          Verify
+                        </button>
                       ) : (
-                        isEditing &&
-                        profile.phone && (
-                          <button
-                            onClick={() =>
-                              handleRequestOtp(profile.phone!, "phone")
-                            }
-                            className="w-full sm:w-auto bg-amber-500 text-white px-3 py-1.5 rounded-xl text-[9px] font-oswald font-black uppercase active:scale-95 transition-transform"
-                          >
-                            Verify
-                          </button>
-                        )
+                        <div className="bg-red-500 text-white px-2.5 py-1.5 rounded-xl text-[9px] font-oswald font-black uppercase active:scale-95 transition-transform">
+                          Unverified
+                        </div>
                       )}
                     </div>
                   </div>

@@ -4,8 +4,10 @@ import React, { useState } from "react";
 import { changePassword } from "../services/apis";
 import { Lock, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
+import { useUser } from "../UserContext";
 
 export default function ChangePassword() {
+  const {setUser} = useUser();
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -37,6 +39,9 @@ export default function ChangePassword() {
 
       if (data.success) {
         toast.success("Credential signature successfully updated!");
+        if (setUser) {
+          setUser(data.user);
+        }
         setFormData({
           currentPassword: "",
           newPassword: "",

@@ -1,7 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {
-  sessionResponse,
-} from "./types";
+import { sessionResponse } from "./types";
 import { parseISO, formatDistanceToNow } from "date-fns";
 
 // const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
@@ -23,7 +21,7 @@ export const checkSession = async (): Promise<sessionResponse> => {
 };
 
 export const postLogout = async () => {
-  const res = await fetch('/api/logout', {
+  const res = await fetch("/api/logout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -67,7 +65,7 @@ export const changePassword = async (
   role: string,
 ) => {
   try {
-    const response = await fetch("/api/change-password", {
+    const response = await fetch("/api/master/change-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ currentPassword, newPassword, role }),
@@ -126,7 +124,7 @@ export const getCloudinaryUrl = async (
   file: File, // Pass the native Browser File object directly here instead of a string URI
   selectionType: "image" | "audio" | "video" | "document",
 ) => {
-  console.log("uploading into cloudinary")
+  console.log("uploading into cloudinary");
   try {
     if (!file) {
       console.error("No file provided for upload.");
@@ -205,5 +203,109 @@ export const getRelativeTime = (timestamp: string) => {
     return formatDistanceToNow(date, { addSuffix: true });
   } catch (error) {
     return timestamp; // Fallback to raw string if it fails
+  }
+};
+
+export const fetchSystemPermissionsApi = async () => {
+  try {
+    const res = await fetch("/api/master/system-permissions", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const data = await res.json();
+    console.log("Fetched system permissions matrix:", data);
+    return data;
+  } catch (err) {
+    console.error("API Error fetching system permissions matrix:", err);
+    return { success: false, permissions: [] };
+  }
+};
+
+/**
+ * Fetches saved reusable role templates.
+ */
+export const fetchCustomRolesApi = async () => {
+  try {
+    const res = await fetch("/api/master/custom-roles", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    return await res.json();
+  } catch (err) {
+    console.error("API Error fetching custom roles lists:", err);
+    return { success: false, roles: [] };
+  }
+};
+
+/**
+ * Saves a chosen assortment of permissions as a new role template row blueprint.
+ */
+export const createCustomRoleApi = async (
+  roleName: string,
+  description: string,
+  permissionIds: string[],
+) => {
+  try {
+    const res = await fetch("/api/master/custom-roles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        role_name: roleName,
+        description,
+        permission_ids: permissionIds,
+      }),
+    });
+    return await res.json();
+  } catch (err) {
+    console.error("API Error creating custom role:", err);
+    return {
+      success: false,
+      message: "Network connection fault storing role template.",
+    };
+  }
+};
+
+export const createSuperAdminUserWorkspaceApi = async (payload: {
+  full_name: string;
+  email: string;
+  phone_number: string | null;
+  require_password_change: boolean;
+  sub_account: boolean;
+  permissions: string[];
+}) => {
+  try {
+    const res = await fetch("/api/master/admins/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  } catch (err) {
+    console.error("API Error creating administrative account:", err);
+    return {
+      success: false,
+      message: "Network connection fault creating user workspace profile.",
+    };
+  }
+};
+
+
+export const fetchUserLogsApi = async (filters?: { action_type?: string; target_resource?: string }) => {
+  try {
+    let url = "/api/master/user-logs";
+    if (filters) {
+      const params = new URLSearchParams(filters as any);
+      url += `?${params.toString()}`;
+    }
+
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    return await res.json();
+  } catch (err) {
+    console.error("API Error fetching system activity audit table:", err);
+    return { success: false, logs: [] };
   }
 };

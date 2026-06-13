@@ -6,7 +6,6 @@ import { db } from "../services/database";
 import {
   Mail,
   Lock,
-  ShieldCheck, // Swapped UserIcon for ShieldCheck
   ArrowRight,
   AlertCircle,
   Eye,
@@ -27,7 +26,7 @@ export default function Auth() {
   const { setUser } = useUser();
   const router = useRouter();
   const [mfaType, setMfaType] = useState<"EMAIL" | "TOTP" | "NONE">("NONE");
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  // const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
   const [sessionLoading, setSessionLoading] = useState(true);
   const [show, setShow] = useState(false);
   const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
