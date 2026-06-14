@@ -3,15 +3,12 @@
 import { useState } from "react";
 import { ShieldCheck, MapPin, Clock, ChevronRight } from "lucide-react";
 import { VerificationRequest } from "../services/types";
-import { MOCK_VERIFICATION_REQUESTS } from "../services/Mock_data";
 import RequestDetailView from "./RequestDetailView";
 
 export default function RequestsPage() {
   const [selectedRequest, setSelectedRequest] =
     useState<VerificationRequest | null>(null);
-  const [requests] = useState<VerificationRequest[]>(
-    MOCK_VERIFICATION_REQUESTS,
-  );
+  const [requests] = useState<VerificationRequest[]>([]);
 
   // If a request is selected, show the side-by-side detail view
   if (selectedRequest) {

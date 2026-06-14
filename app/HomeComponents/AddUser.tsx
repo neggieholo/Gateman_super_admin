@@ -24,9 +24,12 @@ import {
   createSuperAdminUserWorkspaceApi,
 } from "../services/apis";
 import { PermissionNode, CustomRoleMapping } from "../services/types";
+import { useUser } from "../UserContext";
 
 export default function AddSuperAdmin() {
-  // Page Lifecycle Data Loading Indicators
+  const { user } = useUser();
+  const myPermissions = user?.permissions || [];
+  const iHaveAllAccess = myPermissions.includes("all-access");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -78,6 +81,25 @@ export default function AddSuperAdmin() {
 
   // Handle Multi-level Permission Check Toggles
   const handleTogglePermission = (id: string, isParent: boolean) => {
+    if ((id === "all-access" || id === "all_access") && !iHaveAllAccess) {
+      toast.error(
+        `Access Denied. You require "All Access" permission to grant this.`,
+        {
+          id: "unauthorized-permissions-lock",
+          duration: 3000, 
+          position: "top-center",
+          style: {
+            fontWeight: "bold",
+            borderRadius: "12px",
+            background: "#1E293B",
+            color: "#FFFFFF",
+            maxWidth: "450px",
+          },
+        },
+      );
+      return;
+    }
+
     let updated = [...selectedPermissions];
 
     if (isParent) {
@@ -121,6 +143,27 @@ export default function AddSuperAdmin() {
   };
 
   const handleApplyPresetRole = (rolePermissions: string[]) => {
+    const containsAllAccess = rolePermissions.some(
+      (p) => p === "all-access" || p === "all_access",
+    );
+    if (containsAllAccess && !iHaveAllAccess) {
+      toast.error(
+        'Access Denied. You require "All Access" permission to apply this role.',
+        {
+          id: "unauthorized-preset-lock",
+          duration: 3000,
+          position: "top-center",
+          style: {
+            fontWeight: "bold",
+            borderRadius: "12px",
+            background: "#1E293B",
+            color: "#FFFFFF",
+            maxWidth: "450px",
+          },
+        },
+      );
+      return;
+    }
     setSelectedPermissions(rolePermissions);
     toast.success("Role preset mapped onto permissions.");
   };
@@ -131,9 +174,7 @@ export default function AddSuperAdmin() {
     if (!customRoleName.trim())
       return toast.error("Enter a valid unique designation label.");
     if (selectedPermissions.length === 0)
-      return toast.error(
-        "Select permissions to create a custom role.",
-      );
+      return toast.error("Select permissions to create a custom role.");
 
     try {
       setSavingCustomRole(true);
@@ -150,13 +191,11 @@ export default function AddSuperAdmin() {
           `Role template "${res.role.role_name}" saved successfully.`,
         );
       } else {
-        toast.error(
-          res.message || "Failed to save role.",
-        );
+        toast.error(res.message || "Failed to save role.");
       }
     } catch (err) {
       toast.error("Network error.");
-    } finally{
+    } finally {
       setSavingCustomRole(false);
     }
   };
@@ -165,9 +204,7 @@ export default function AddSuperAdmin() {
   const handleCreateUserWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !email)
-      return toast.error(
-        "Satisfy full name and email routing fields.",
-      );
+      return toast.error("Satisfy full name and email routing fields.");
 
     try {
       setIsSubmitting(true);
@@ -184,9 +221,7 @@ export default function AddSuperAdmin() {
       const res = await createSuperAdminUserWorkspaceApi(payload);
 
       if (res.success) {
-        toast.success(
-          `Onboarding Profile built for ${fullName}.`,
-        );
+        toast.success(`Onboarding Profile built for ${fullName}.`);
         setFullName("");
         setEmail("");
         setPassword("");
@@ -214,9 +249,6 @@ export default function AddSuperAdmin() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
         <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-        <p className="text-xs font-semibold text-slate-400">
-          Synchronizing authorization matrix...
-        </p>
       </div>
     );
   }

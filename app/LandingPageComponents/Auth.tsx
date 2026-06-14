@@ -236,6 +236,15 @@ export default function Auth() {
           return;
         }
 
+        if (data.success && data.user && !data.user.email_verfied) {
+          setUser(data.user);
+          setMfaType("EMAIL");
+          setLoading(false);
+
+          await handleRequestOtp();
+          return;
+        }
+
         // CATCH EMAIL MFA INTERRUPTION
         if (data.status === "EMAIL_MFA_REQUIRED") {
           setUser(data.user);
@@ -453,7 +462,7 @@ export default function Auth() {
               </div>
             )}
 
-            {isLogin && !isForgot && (
+            {/* {isLogin && !isForgot && (
               <div className="flex items-center mt-4">
                 <input
                   id="remember_me"
@@ -473,7 +482,7 @@ export default function Auth() {
                   Remember me
                 </label>
               </div>
-            )}
+            )} */}
 
             {isLogin && (
               <div className="flex items-center justify-end">

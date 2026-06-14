@@ -12,8 +12,18 @@ import {
 import toast from "react-hot-toast";
 import { UserLogEntry } from "../services/types";
 import { fetchUserLogsApi } from "../services/apis";
+import { useUser } from "../UserContext";
 
-export default function UserLogsPage() {
+interface UserLogsPageProps {
+  isolatedAdminId?: string | null;
+  isolatedAdminName?: string | null;
+}
+
+export default function UserLogsPage({
+  isolatedAdminId = null,
+  isolatedAdminName = null,
+}: UserLogsPageProps) {
+  const { user } = useUser();
   const [logs, setLogs] = useState<UserLogEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -33,7 +43,7 @@ export default function UserLogsPage() {
           toast.error(response.message || "Failed to sync system user logs.");
         }
       } catch (err) {
-        toast.error("Network handshake exception compiling log streams.");
+        toast.error("Network handshake exception");
         console.error(err);
       } finally {
         setLoading(false);
@@ -45,6 +55,12 @@ export default function UserLogsPage() {
 
   // 🧠 2. High-Performance Memoized Local Filtering Matrix
   const filteredLogs = useMemo(() => {
+    if (isolatedAdminId) {
+      return logs.filter(
+        (log) => String(log.user_id) === String(isolatedAdminId),
+      );
+    }
+
     return logs.filter((log) => {
       // Name / Email filter evaluation match signature
       const matchesName =
@@ -59,11 +75,34 @@ export default function UserLogsPage() {
 
       return matchesName && matchesDate;
     });
-  }, [logs, nameFilter, dateFilter]);
+  }, [logs, nameFilter, dateFilter, isolatedAdminId]);
 
   // 📥 3. Dynamic Client-Side CSV Downloader (Always matches filtered states)
   const handleDownloadCSV = () => {
     if (filteredLogs.length === 0) return;
+    const canDownloadLogs =
+      user?.permissions.includes("logs_management") ||
+      user?.permissions.includes("download_user_logs") ||
+      user?.permissions.includes("all-access");
+
+    if (!canDownloadLogs) {
+      toast.error(
+        `Access Denied. You do not hold the authorized credentials required for this operation.`,
+        {
+          id: "unauthorized-users-page-lock",
+          duration: 4000,
+          position: "top-center",
+          style: {
+            fontWeight: "bold",
+            borderRadius: "12px",
+            background: "#1E293B",
+            color: "#FFFFFF",
+            maxWidth: "450px",
+          },
+        },
+      );
+      return;
+    }
 
     const headers = [
       "Timestamp",
@@ -119,7 +158,8 @@ export default function UserLogsPage() {
           </div>
           <div>
             <h1 className="font-montserrat font-black text-slate-900 text-lg tracking-tight uppercase">
-              View User Activity Logs
+              View {isolatedAdminName ? isolatedAdminName + "'s" : "User"}{" "}
+              Activity Logs
             </h1>
             <p className="text-xs text-slate-400 font-medium leading-none mt-1">
               Forensic security trail monitoring ledger system.
@@ -149,7 +189,8 @@ export default function UserLogsPage() {
           <Search size={14} className="absolute left-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by administrator name or email address..."
+            disabled={isolatedAdminId !== null}
+            placeholder={isolatedAdminId !== null ? "Search disabled" : "Search by administrator name or email address..."}
             value={nameFilter}
             onChange={(e) => setNameFilter(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-none rounded-xl font-sans font-bold text-slate-900 text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
@@ -266,7 +307,7 @@ export default function UserLogsPage() {
                         {log.ip_address || "0.0.0.0"}
                       </td>
                       <td className="p-4 font-mono text-slate-400 font-semibold whitespace-nowrap">
-                        {log.user_agent || 'unknown'}
+                        {log.user_agent || "unknown"}
                       </td>
                     </tr>
                   );

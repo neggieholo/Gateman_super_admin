@@ -10,161 +10,301 @@ import {
   Ban,
   Trash2,
   Eye,
-  AlertTriangle,
   User,
+  ArrowLeft,
+  Loader2,
 } from "lucide-react";
 import toast from "react-hot-toast";
-
-// Interface for Users matching your PostgreSQL Schema profile
-interface SuperAdminUser {
-  id: string;
-  full_name: string;
-  email: string;
-  phone_number: string | null;
-  mfa_enabled: boolean;
-  mfa_type: "NONE" | "EMAIL" | "TOTP" | "SMS";
-  status: "ACTIVE" | "SUSPENDED";
-  created_at: string;
-}
-
-// Interface for Security Logs
-interface AuditLog {
-  id: string;
-  actor_name: string;
-  action: string;
-  target_user: string;
-  ip_address: string;
-  timestamp: string;
-  severity: "INFO" | "WARNING" | "CRITICAL";
-}
+import { SuperAdminUser } from "../services/types";
+import {
+  deleteAdminProfileApi,
+  fetchAllSuperAdminsApi,
+  toggleAdminStatusApi,
+  updateAdminMfaPolicyApi,
+} from "../services/apis";
+import AdminProfileModal from "./AdminProfileModal";
+import UserLogsPage from "./UserLogsPage";
+import AdminPermissionsModal from "./AdminPermissionsModal";
+import { useUser } from "../UserContext";
+import AdminPasswordOverrideModal from "./AdminPasswordOverrideModal";
+import SecurityActionWarningModal from "./SecurityActionWarningModal";
 
 export default function ManageUsersPage() {
-  const [activeTab, setActiveTab] = useState<"users" | "add" | "logs">("users");
+  const { user } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
-  const [logFilter, setLogFilter] = useState<
-    "ALL" | "INFO" | "WARNING" | "CRITICAL"
-  >("ALL");
+  const [adminCount, setAdminCount] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<SuperAdminUser[]>([]);
+  const [selectedProfileUser, setSelectedProfileUser] =
+    useState<SuperAdminUser | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isLogsOpen, setIsLogsOpen] = useState(false);
+  const [logsId, setLogsId] = useState("");
+  const [logsName, setLogsName] = useState("");
+  const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+  const [selectedPermissionsUser, setSelectedPermissionsUser] =
+    useState<SuperAdminUser | null>(null);
+  const [isOverrideOpen, setIsOverrideOpen] = useState(false);
+  const [selectedOverrideUser, setSelectedOverrideUser] =
+    useState<SuperAdminUser | null>(null);
+  const [isWarningOpen, setIsWarningOpen] = useState(false);
+  const [warningConfig, setWarningConfig] = useState<{
+    title: string;
+    message: string;
+    confirmText: string;
+    variant: "warning" | "danger";
+    onConfirm: () => Promise<void> | void;
+  }>({
+    title: "",
+    message: "",
+    confirmText: "",
+    variant: "warning",
+    onConfirm: () => {},
+  });
 
-  // Simulated Workspace Data — Swap these out for your React Fetch/Axios database endpoints
-  const [users, setUsers] = useState<SuperAdminUser[]>([
-    {
-      id: "1",
-      full_name: "Simon Effiong",
-      email: "simon@gateman.com",
-      phone_number: "+2348012345678",
-      mfa_enabled: true,
-      mfa_type: "TOTP",
-      status: "ACTIVE",
-      created_at: "2026-03-12 14:22",
-    },
-    {
-      id: "2",
-      full_name: "John Doe",
-      email: "j.doe@gateman.com",
-      phone_number: "+2349087654321",
-      mfa_enabled: false,
-      mfa_type: "NONE",
-      status: "ACTIVE",
-      created_at: "2026-05-19 09:15",
-    },
-    {
-      id: "3",
-      full_name: "Jane Smith",
-      email: "jane.smith@gateman.com",
-      phone_number: null,
-      mfa_enabled: true,
-      mfa_type: "EMAIL",
-      status: "SUSPENDED",
-      created_at: "2026-06-01 11:40",
-    },
-  ]);
-
-  const [logs, setLogs] = useState<AuditLog[]>([
-    {
-      id: "LOG-901",
-      actor_name: "Simon Effiong",
-      action: "Revoked Permission: Estate Wallet Write Access",
-      target_user: "John Doe",
-      ip_address: "102.89.43.12",
-      timestamp: "2026-06-13 08:32:11",
-      severity: "WARNING",
-    },
-    {
-      id: "LOG-902",
-      actor_name: "Simon Effiong",
-      action: "Suspended Account Status",
-      target_user: "Jane Smith",
-      ip_address: "102.89.43.12",
-      timestamp: "2026-06-12 16:45:00",
-      severity: "CRITICAL",
-    },
-    {
-      id: "LOG-903",
-      actor_name: "System Terminal",
-      action: "MFA Handshake Verification Setup Link",
-      target_user: "Simon Effiong",
-      ip_address: "197.210.8.54",
-      timestamp: "2026-06-11 10:14:25",
-      severity: "INFO",
-    },
-  ]);
-
-  // Action Toggles
-  const handleToggleStatus = (
-    id: string,
-    currentStatus: "ACTIVE" | "SUSPENDED",
-  ) => {
-    const nextStatus = currentStatus === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
-    setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, status: nextStatus } : u)),
-    );
-    toast.success(`User successfully ${nextStatus.toLowerCase()}!`);
-  };
-
-  const handleToggleMfa = (id: string, currentMfa: boolean) => {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === id
-          ? {
-              ...u,
-              mfa_enabled: !currentMfa,
-              mfa_type: !currentMfa ? "EMAIL" : "NONE",
-            }
-          : u,
-      ),
-    );
-    toast.success(`MFA policy enforcement modified.`);
-  };
-
-  const handleResetPassword = (email: string) => {
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: "Generating secure recovery sequence token...",
-      success: `Password reset vector sent to ${email}`,
-      error: "Failed to dispatch reset request.",
-    });
-  };
-
-  const handleDeleteUser = (id: string, name: string) => {
-    if (
-      confirm(
-        `CRITICAL DELETION FORCE CHALLENGE: Are you completely certain you want to purge admin entry "${name}" from the GateMan core database mapping?`,
-      )
-    ) {
-      setUsers((prev) => prev.filter((u) => u.id !== id));
-      toast.error("Administrator access profile deleted.");
+  const fetchAdmins = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchAllSuperAdminsApi();
+      if (data.success) {
+        setUsers(data.users ?? []);
+        setAdminCount(data.count ?? 0);
+      } else {
+        toast.error("Failed to load users.");
+      }
+    } catch (err) {
+      toast.error("Network handshake exception.");
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Redirection Link Routine: Filters logs view down to a single user footprint context
-  const handleInspectUserLogs = (userName: string) => {
-    setSearchQuery(userName);
-    setActiveTab("logs");
-    toast(`Viewing audit logs for: ${userName}`, { icon: "🔍" });
+  useEffect(() => {
+    fetchAdmins();
+  }, []);
+
+  const showAccessDeniedToast = () => {
+    toast.error(
+      `Access Denied. You do not hold the authorized credentials required for this operation.`,
+      {
+        id: "unauthorized-users-page-lock",
+        duration: 4000,
+        position: "top-center",
+        style: {
+          fontWeight: "bold",
+          borderRadius: "12px",
+          background: "#1E293B",
+          color: "#FFFFFF",
+          maxWidth: "450px",
+        },
+      },
+    );
   };
 
-  const handleEditPermissions = (userId: string, userName: string) => {
-    // e.g., open a modal overlay or state tray containing your granular feature permission checkboxes
-    toast(`Opening permission matrix for ${userName}`, { icon: "🔐" });
+  const handleOpenProfile = (user: SuperAdminUser) => {
+    setSelectedProfileUser(user);
+    setIsProfileOpen(true);
+  };
+
+  const handleOpenLogs = (id: string, name: string) => {
+    const canViewLogs =
+      user?.permissions.includes("logs_management") ||
+      user?.permissions.includes("view_user_logs") ||
+      user?.permissions.includes("all-access");
+
+    if (!canViewLogs) {
+      showAccessDeniedToast();
+      return;
+    }
+    setLogsId(id);
+    setIsLogsOpen(true);
+    setLogsName(name);
+  };
+
+  const handleEditPermissions = (user: SuperAdminUser) => {
+    const canManagePermissions =
+      user?.permissions.includes("users_management") ||
+      user?.permissions.includes("modify_user_permissions") ||
+      user?.permissions.includes("all-access");
+
+    if (!canManagePermissions) {
+      showAccessDeniedToast();
+      return;
+    }
+    setSelectedPermissionsUser(user);
+    setIsPermissionsOpen(true);
+  };
+
+  const handleResetPassword = (targetUser: SuperAdminUser) => {
+    // Check permission rules for the active user context
+    const canOverrideCredentials =
+      user?.permissions.includes("users_management") ||
+      user?.permissions.includes("modify_users_pass") ||
+      user?.permissions.includes("all-access");
+
+    if (!canOverrideCredentials) {
+      showAccessDeniedToast();
+      return;
+    }
+
+    setSelectedOverrideUser(targetUser);
+    setIsOverrideOpen(true);
+  };
+
+  const handleToggleMfa = async (id: string, currentMfa: boolean) => {
+    // 1. Enforce strict client-side permission guards
+    const canManageSecurity =
+      user?.permissions.includes("users_management") ||
+      user?.permissions.includes("modify_users_mfa") ||
+      user?.permissions.includes("all_access");
+
+    if (!canManageSecurity) {
+      showAccessDeniedToast();
+      return;
+    }
+
+    const targetNewMfaState = !currentMfa;
+
+    // 3. Dispatch an asynchronous network resolution promise track
+    toast.promise(
+      updateAdminMfaPolicyApi(id, targetNewMfaState),
+      {
+        loading: "Synchronizing remote MFA security matrix fields...",
+        success: (res) => {
+          if (res.success) {
+            fetchAdmins();
+            return targetNewMfaState
+              ? "MFA guard constraints successfully enforced on account."
+              : "MFA guard protection completely stripped from account configuration.";
+          }
+          throw new Error(res.message);
+        },
+        error: (err) =>
+          err.message ||
+          "Failed to update security credentials mapping parameters.",
+      },
+      {
+        style: { fontWeight: "bold", borderRadius: "10px" },
+      },
+    );
+  };
+
+  const handleToggleStatus = async (id: string, status: boolean) => {
+    const canToggleStatus =
+      user?.permissions.includes("users_management") ||
+      user?.permissions.includes("modify_users_mfa") ||
+      user?.permissions.includes("all_access");
+
+    if (!canToggleStatus) {
+      showAccessDeniedToast();
+      return;
+    }
+
+    toast.promise(
+      toggleAdminStatusApi(id, status),
+      {
+        loading: "Updating system status parameters...",
+        success: (res) => {
+          if (res.success) {
+            fetchAdmins(); 
+            return `Account access successfully updated.`;
+          }
+          throw new Error(res.message);
+        },
+        error: (err) => {
+          return err.message || "Failed to update target row state status.";
+        },
+      },
+      { style: { fontWeight: "bold", borderRadius: "10px" } },
+    );
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    const canDeleteUser =
+      user?.permissions.includes("users_management") ||
+      user?.permissions.includes("delete_user") ||
+      user?.permissions.includes("all_access");
+
+    if (!canDeleteUser) {
+      showAccessDeniedToast();
+      return;
+    }
+
+    toast.promise(
+      deleteAdminProfileApi(id),
+      {
+        loading: "Purging security database structures...",
+        success: (res) => {
+          if (res.success) {
+            fetchAdmins(); 
+            return "Administrator profile entirely stripped from core registries.";
+          }
+          throw new Error(res.message);
+        },
+        error: (err) => {
+          return (
+            err.message ||
+            "An exception occurred handling database pruning commands."
+          );
+        },
+      },
+      { style: { fontWeight: "bold", borderRadius: "10px" } },
+    );
+  };
+
+  const triggerToggleStatusWarning = (targetUser: SuperAdminUser) => {
+    const targetNewActiveState = !targetUser.is_active;
+    setWarningConfig({
+      title: targetUser.is_active
+        ? "Suspend Account Profile"
+        : "Activate Account Profile",
+      message: `Are you certain you want to shift the operational status for ${targetUser.full_name}? ${
+        targetUser.is_active
+          ? "This will instantly terminate their platform workstation handshake authentication keys."
+          : "This will restore their system permissions access vector loops immediately."
+      }`,
+      confirmText: targetUser.is_active ? "Suspend User" : "Activate User",
+      variant: targetUser.is_active ? "danger" : "warning",
+      onConfirm: async () => {
+        await handleToggleStatus(targetUser.id, targetNewActiveState);
+      },
+    });
+    setIsWarningOpen(true);
+  };
+
+  // 2. Unified Trigger for MFA Security Toggling Action
+  const triggerToggleMfaWarning = (targetUser: SuperAdminUser) => {
+    const targetNewMfaState = !targetUser.mfa_enabled;
+
+    setWarningConfig({
+      title: targetNewMfaState
+        ? "Enforce Security MFA"
+        : "Strip Account MFA Guard",
+      message: targetNewMfaState
+        ? `Are you sure you want to enforce default Multi-Factor Authentication policy guards for ${targetUser.full_name}?`
+        : `CRITICAL ACTION ALERT: Are you completely certain you want to bypass and disable Multi-Factor Authentication protection for ${targetUser.full_name}? This lowers account security guidelines.`,
+      confirmText: targetNewMfaState ? "Enforce MFA" : "Disable MFA Protection",
+      variant: targetNewMfaState ? "warning" : "danger",
+      onConfirm: async () => {
+        await handleToggleMfa(targetUser.id, targetNewMfaState);
+      },
+    });
+    setIsWarningOpen(true);
+  };
+
+  // 3. Unified Trigger for Hard Profile Purge Deletion Action
+  const triggerDeleteUserWarning = (targetUser: SuperAdminUser) => {
+    setWarningConfig({
+      title: "Purge Admin Account Vector",
+      message: `CRITICAL DATA DELETION FORCE CHALLENGE: Are you completely certain you want to permanently purge "${targetUser.full_name}" from the GateMan core database repository? This action is absolute and cannot be undone.`,
+      confirmText: "Delete Account Profile",
+      variant: "danger",
+      onConfirm: async () => {
+        await handleDeleteUser(targetUser.id);
+      },
+    });
+    setIsWarningOpen(true);
   };
 
   // Filtered Lists Logic Matrices
@@ -174,14 +314,21 @@ export default function ManageUsersPage() {
       u.email.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const filteredLogs = logs.filter((l) => {
-    const matchesSearch =
-      l.actor_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.target_user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.action.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSeverity = logFilter === "ALL" || l.severity === logFilter;
-    return matchesSearch && matchesSeverity;
-  });
+  if (isLogsOpen) {
+    return (
+      <div className="bg-white p-2 sm:p-8 rounded-4xl border border-slate-100 shadow-sm space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <button
+          onClick={() => {
+            setIsLogsOpen(false);
+          }}
+          className="flex items-center gap-2 text-xs font-sans font-bold text-slate-500 hover:text-slate-800 transition-colors mb-2"
+        >
+          <ArrowLeft size={16} /> Back
+        </button>
+        <UserLogsPage isolatedAdminId={logsId} isolatedAdminName={logsName} />
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 h-[calc(100vh-120px)] bg-slate-50/50 font-sans">
@@ -200,342 +347,230 @@ export default function ManageUsersPage() {
 
       {/* TAB CONTENT MATRICES */}
       <div className="animate-in fade-in zoom-in-99 duration-150">
-        {/* TAB 1: MANAGE USERS VIEWPORT */}
-        {activeTab === "users" && (
-          <div className="space-y-4">
-            {/* Search Filter Strip */}
-            <div className="flex items-center relative max-w-sm">
-              <Search className="absolute left-4 text-slate-400" size={18} />
-              <input
-                type="text"
-                placeholder="Search active admins by signature or endpoint..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200/80 rounded-2xl font-sans font-bold text-slate-900 text-xs shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-
-            {/* Main Data Table */}
-            <div className="bg-white rounded-4xl border border-slate-100 shadow-xl shadow-slate-100/40 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-oswald font-black uppercase tracking-widest text-slate-400">
-                      <th className="p-5">Identity Profile</th>
-                      <th className="p-5">MFA Guard Status</th>
-                      <th className="p-5">Gate Status</th>
-                      <th className="p-5 text-center">
-                        Security Core Controls
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 font-sans text-sm font-bold text-slate-700">
-                    {filteredUsers.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          className="p-10 text-center text-slate-400 text-xs font-medium"
-                        >
-                          No administrative configurations found matching the
-                          search context footprint.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredUsers.map((u) => (
-                        <tr
-                          key={u.id}
-                          className="hover:bg-slate-50/50 transition-colors"
-                        >
-                          {/* Name / Email Column */}
-                          <td className="p-5">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-montserrat font-black text-sm shadow-inner">
-                                {u.full_name.slice(0, 2).toUpperCase()}
-                              </div>
-                              <div>
-                                <h4 className="text-slate-900 font-bold text-sm leading-tight">
-                                  {u.full_name}
-                                </h4>
-                                <span className="text-xs text-slate-400 font-medium font-mono">
-                                  {u.email}
-                                </span>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* MFA Guard Column */}
-                          <td className="p-5">
-                            <div className="flex items-center gap-2">
-                              {u.mfa_enabled ? (
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
-                                  <ShieldCheck size={14} />
-                                  <span className="text-[9px] font-oswald font-black uppercase tracking-wider">
-                                    {u.mfa_type} Active
-                                  </span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 text-rose-500 rounded-xl border border-rose-100">
-                                  <ShieldAlert size={14} />
-                                  <span className="text-[9px] font-oswald font-black uppercase tracking-wider">
-                                    Unprotected
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Account Status Column */}
-                          <td className="p-5">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-1 rounded-xl text-[9px] font-oswald font-black uppercase tracking-wider border ${
-                                u.status === "ACTIVE"
-                                  ? "bg-emerald-50/60 border-emerald-100 text-emerald-600"
-                                  : "bg-rose-50/60 border-rose-100 text-rose-600"
-                              }`}
-                            >
-                              {u.status}
-                            </span>
-                          </td>
-
-                          {/* Security Operations Controls Column */}
-                          <td className="p-5">
-                            <div className="flex items-center justify-center gap-1.5">
-                              {/* Inspect Footprint Button */}
-                              <button
-                                onClick={() =>
-                                  handleInspectUserLogs(u.full_name)
-                                }
-                                title="View User's Profile"
-                                className="p-2 bg-slate-50 text-slate-400 hover:text-blue-400 hover:bg-indigo-50 rounded-xl transition-all border border-slate-100"
-                              >
-                                <User size={15} />
-                              </button>
-
-                              <button
-                                onClick={() =>
-                                  handleInspectUserLogs(u.full_name)
-                                }
-                                title="Inspect Activity Logs"
-                                className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all border border-slate-100"
-                              >
-                                <Eye size={15} />
-                              </button>
-
-                              {/* NEW: Edit Permissions & Custom Roles Button */}
-                              <button
-                                onClick={() =>
-                                  handleEditPermissions(u.id, u.full_name)
-                                }
-                                title="Modify Custom Roles & Permissions Matrix"
-                                className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all border border-slate-100"
-                              >
-                                <ShieldAlert size={15} />
-                              </button>
-
-                              {/* Reset Password Button */}
-                              <button
-                                onClick={() => handleResetPassword(u.email)}
-                                title="Trigger Password Reset Email Challenge"
-                                className="p-2 bg-slate-50 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all border border-slate-100"
-                              >
-                                <RotateCcw size={15} />
-                              </button>
-
-                              {/* Toggle MFA Protection Explicitly */}
-                              <button
-                                onClick={() =>
-                                  handleToggleMfa(u.id, u.mfa_enabled)
-                                }
-                                title={
-                                  u.mfa_enabled
-                                    ? "Deactivate Security MFA Restriction Override"
-                                    : "Enforce Default MFA Protection Loop"
-                                }
-                                className={`p-2 rounded-xl transition-all border ${
-                                  u.mfa_enabled
-                                    ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100"
-                                    : "bg-slate-50 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 border-slate-100"
-                                }`}
-                              >
-                                <ShieldCheck size={15} />
-                              </button>
-
-                              {/* Suspend / Enable Toggle */}
-                              <button
-                                onClick={() =>
-                                  handleToggleStatus(u.id, u.status)
-                                }
-                                title={
-                                  u.status === "ACTIVE"
-                                    ? "Suspend Admin Account Interception"
-                                    : "Re-activate Core Account Link"
-                                }
-                                className={`p-2 rounded-xl transition-all border ${
-                                  u.status === "SUSPENDED"
-                                    ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100 animate-pulse"
-                                    : "bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border-slate-100"
-                                }`}
-                              >
-                                <Ban size={15} />
-                              </button>
-
-                              {/* Delete Admin Account Matrix */}
-                              <button
-                                onClick={() =>
-                                  handleDeleteUser(u.id, u.full_name)
-                                }
-                                title="Purge Core Admin Authorization Profile"
-                                className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-slate-100"
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+        <div className="space-y-4">
+          {/* Search Filter Strip */}
+          <div className="flex items-center relative max-w-sm">
+            <Search className="absolute left-4 text-slate-400" size={18} />
+            <input
+              type="text"
+              placeholder="Search active admins by signature or endpoint..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200/80 rounded-2xl font-sans font-bold text-slate-900 text-xs shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
           </div>
-        )}
 
-        {/* TAB 2: ADD SUPER ADMIN STAGING LOOP */}
-        {activeTab === "add" && (
-          <div className="bg-white p-8 rounded-4xl border border-slate-100 shadow-xl shadow-slate-100/40">
-            {/* Calling placeholder for AddSuperAdmin layout node */}
-            <div className="border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center text-slate-400 font-bold text-xs">
-              <UserPlus size={40} className="mx-auto text-slate-300 mb-3" />
-              <span>[ AddSuperAdmin() Mount Point Block ]</span>
-              <p className="font-normal font-sans text-slate-400/70 mt-1 max-w-xs mx-auto">
-                We will bridge your existing configuration form handler right
-                into this layout context block next.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: AUDIT LOGS SECURITY JOURNAL */}
-        {activeTab === "logs" && (
-          <div className="space-y-4">
-            {/* Filter controls container layout */}
-            <div className="flex flex-col sm:flex-row justify-between gap-4 items-stretch sm:items-center">
-              {/* Internal Search */}
-              <div className="flex items-center relative max-w-sm flex-1">
-                <Search className="absolute left-4 text-slate-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="Filter logs by actor name, target, or key event..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200/80 rounded-2xl font-sans font-bold text-slate-900 text-xs shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
-              </div>
-
-              {/* Severity Quick Filters */}
-              <div className="flex bg-white p-1.5 rounded-xl border border-slate-200/80 shadow-sm gap-1 self-start sm:self-auto overflow-x-auto">
-                {(["ALL", "INFO", "WARNING", "CRITICAL"] as const).map(
-                  (sev) => (
-                    <button
-                      key={sev}
-                      onClick={() => setLogFilter(sev)}
-                      className={`px-3 py-1.5 rounded-lg text-[9px] font-oswald font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                        logFilter === sev
-                          ? "bg-slate-900 text-white shadow-sm"
-                          : "text-slate-400 hover:text-slate-700"
-                      }`}
-                    >
-                      {sev}
-                    </button>
-                  ),
-                )}
-              </div>
-            </div>
-
-            {/* Audit Logs Layout Frame */}
-            <div className="bg-white rounded-4xl border border-slate-100 shadow-xl shadow-slate-100/40 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-oswald font-black uppercase tracking-widest text-slate-400">
-                      <th className="p-5">Log ID / Timestamp</th>
-                      <th className="p-5">Operator Execution Signature</th>
-                      <th className="p-5">Security Operation Action Event</th>
-                      <th className="p-5">Target Node</th>
-                      <th className="p-5 text-right">IP Footprint</th>
+          {/* Main Data Table */}
+          <div className="bg-white rounded-4xl border border-slate-100 shadow-xl shadow-slate-100/40 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-oswald font-black uppercase tracking-widest text-slate-400">
+                    <th className="p-5">Identity Profile</th>
+                    <th className="p-5">MFA Guard Status</th>
+                    <th className="p-5">Status</th>
+                    <th className="p-5 text-center">Security Core Controls</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 font-sans text-sm font-bold text-slate-700">
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="p-10 text-center text-slate-400 text-xs font-medium"
+                      >
+                        {loading ? (
+                          <div className="flex flex-col items-center justify-center flex-1 gap-3">
+                            <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+                          </div>
+                        ) : (
+                          "No administrative configurations found matching the search context footprint"
+                        )}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 font-mono text-xs text-slate-600 font-medium">
-                    {filteredLogs.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={5}
-                          className="p-10 text-center text-slate-400 font-sans font-medium text-xs"
-                        >
-                          No forensic authentication signatures matching your
-                          configuration queries.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredLogs.map((l) => (
-                        <tr
-                          key={l.id}
-                          className="hover:bg-slate-50/30 transition-colors"
-                        >
-                          {/* Log Identifier & Time stamp */}
-                          <td className="p-5 whitespace-nowrap">
-                            <span className="text-slate-900 font-bold block">
-                              {l.id}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-medium">
-                              {l.timestamp}
-                            </span>
-                          </td>
-
-                          {/* Operator Identity */}
-                          <td className="p-5 font-sans font-bold text-slate-800 whitespace-nowrap">
-                            {l.actor_name}
-                          </td>
-
-                          {/* Action Log String + Severity Chip Indicator */}
-                          <td className="p-5 max-w-xs font-sans">
-                            <div className="flex flex-col md:flex-row gap-2 items-start md:items-center">
-                              {l.severity === "CRITICAL" && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-md text-[8px] font-oswald font-black uppercase tracking-wider border border-rose-100 shrink-0">
-                                  <AlertTriangle size={10} /> CRIT
-                                </span>
-                              )}
-                              {l.severity === "WARNING" && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-600 rounded-md text-[8px] font-oswald font-black uppercase tracking-wider border border-amber-100 shrink-0">
-                                  <AlertTriangle size={10} /> WARN
-                                </span>
-                              )}
-                              <span className="text-slate-600 text-xs font-medium leading-normal">
-                                {l.action}
+                  ) : (
+                    filteredUsers.map((u) => (
+                      <tr
+                        key={u.id}
+                        className="hover:bg-slate-50/50 transition-colors"
+                      >
+                        {/* Name / Email Column */}
+                        <td className="p-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-montserrat font-black text-sm shadow-inner">
+                              {u.full_name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <h4 className="text-slate-900 font-bold text-sm leading-tight">
+                                {u.full_name}
+                              </h4>
+                              <span className="text-xs text-slate-400 font-medium font-mono">
+                                {u.email}
                               </span>
                             </div>
-                          </td>
+                          </div>
+                        </td>
 
-                          {/* Target User Impact footprint */}
-                          <td className="p-5 font-sans font-semibold text-slate-700 whitespace-nowrap">
-                            {l.target_user}
-                          </td>
+                        {/* MFA Guard Column */}
+                        <td className="p-5">
+                          <div className="flex items-center gap-2">
+                            {u.mfa_enabled ? (
+                              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
+                                <ShieldCheck size={14} />
+                                <span className="text-[9px] font-oswald font-black uppercase tracking-wider">
+                                  {u.mfa_type} Active
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 text-rose-500 rounded-xl border border-rose-100">
+                                <ShieldAlert size={14} />
+                                <span className="text-[9px] font-oswald font-black uppercase tracking-wider">
+                                  Unprotected
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
 
-                          {/* IP Data Point */}
-                          <td className="p-5 text-right font-bold text-slate-400 whitespace-nowrap">
-                            {l.ip_address}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                        {/* Account Status Column */}
+                        <td className="p-5">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-xl text-[9px] font-oswald font-black uppercase tracking-wider border ${
+                              u.is_active
+                                ? "bg-emerald-50/60 border-emerald-100 text-emerald-600"
+                                : "bg-rose-50/60 border-rose-100 text-rose-600"
+                            }`}
+                          >
+                            {u.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+
+                        {/* Security Operations Controls Column */}
+                        <td className="p-5">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {/* Inspect Footprint Button */}
+                            <button
+                              onClick={() => handleOpenProfile(u)}
+                              title="View User's Profile"
+                              className="p-2 bg-slate-50 text-slate-400 hover:text-blue-400 hover:bg-indigo-50 rounded-xl transition-all border border-slate-100"
+                            >
+                              <User size={15} />
+                            </button>
+
+                            <button
+                              onClick={() => handleOpenLogs(u.id, u.full_name)}
+                              title="Inspect Activity Logs"
+                              className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all border border-slate-100"
+                            >
+                              <Eye size={15} />
+                            </button>
+
+                            {/* NEW: Edit Permissions & Custom Roles Button */}
+                            <button
+                              onClick={() => handleEditPermissions(u)}
+                              title="Modify Custom Roles & Permissions Matrix"
+                              className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all border border-slate-100"
+                            >
+                              <ShieldAlert size={15} />
+                            </button>
+
+                            {/* Reset Password Button */}
+                            <button
+                              onClick={() => handleResetPassword(u)}
+                              title="Trigger Password Reset Email Challenge"
+                              className="p-2 bg-slate-50 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all border border-slate-100"
+                            >
+                              <RotateCcw size={15} />
+                            </button>
+
+                            {/* Toggle MFA Protection Explicitly */}
+                            <button
+                              onClick={() => triggerToggleMfaWarning(u)}
+                              title={
+                                u.mfa_enabled
+                                  ? "Deactivate Security MFA Restriction Override"
+                                  : "Enforce Default MFA Protection Loop"
+                              }
+                              className={`p-2 rounded-xl transition-all border ${
+                                u.mfa_enabled
+                                  ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100"
+                                  : "bg-slate-50 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 border-slate-100"
+                              }`}
+                            >
+                              <ShieldCheck size={15} />
+                            </button>
+
+                            {/* Suspend / Enable Toggle */}
+                            <button
+                              onClick={() => triggerToggleStatusWarning(u)}
+                              title={
+                                u.is_active
+                                  ? "Suspend Admin Account Interception"
+                                  : "Re-activate Core Account Link"
+                              }
+                              className={`p-2 rounded-xl transition-all border ${
+                                u.is_active
+                                  ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100 animate-pulse"
+                                  : "bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border-slate-100"
+                              }`}
+                            >
+                              <Ban size={15} />
+                            </button>
+
+                            {/* Delete Admin Account Matrix */}
+                            <button
+                              onClick={() => triggerDeleteUserWarning(u)}
+                              title="Purge Core Admin Authorization Profile"
+                              className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-slate-100"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        )}
+        </div>
       </div>
+      <AdminProfileModal
+        user={selectedProfileUser}
+        isOpen={isProfileOpen}
+        onClose={() => {
+          setIsProfileOpen(false);
+          setSelectedProfileUser(null);
+        }}
+      />
+      <AdminPermissionsModal
+        user={selectedPermissionsUser}
+        isOpen={isPermissionsOpen}
+        onClose={() => {
+          setIsPermissionsOpen(false);
+          setSelectedPermissionsUser(null);
+        }}
+        onUpdateSuccess={fetchAdmins}
+      />
+      <AdminPasswordOverrideModal
+        user={selectedOverrideUser}
+        isOpen={isOverrideOpen}
+        onClose={() => {
+          setIsOverrideOpen(false);
+          setSelectedOverrideUser(null);
+        }}
+      />
+
+      <SecurityActionWarningModal
+        isOpen={isWarningOpen}
+        onClose={() => setIsWarningOpen(false)}
+        title={warningConfig.title}
+        message={warningConfig.message}
+        confirmText={warningConfig.confirmText}
+        variant={warningConfig.variant}
+        onConfirm={warningConfig.onConfirm}
+      />
     </div>
   );
 }

@@ -197,7 +197,7 @@ export interface ActiveEstate {
 export interface PermissionNode {
   id: string;
   name: string;
-  parent_permission: string | null; 
+  parent_permission: string | null;
 }
 
 export interface CustomRoleMapping {
@@ -206,7 +206,6 @@ export interface CustomRoleMapping {
   description?: string;
   permission_ids: string[];
 }
-
 
 // 📝 Interface structure matching your database return schema
 export interface UserLogEntry {
@@ -218,6 +217,30 @@ export interface UserLogEntry {
   target_resource: string;
   description: string;
   ip_address: string;
-  user_agent:string;
+  user_agent: string;
   created_at: string;
+}
+
+
+export interface SuperAdminUser {
+  id: string;
+  full_name: string;
+  email: string;
+  phone_number: string | null;
+  mfa_enabled: boolean;
+  mfa_type: "NONE" | "EMAIL" | "TOTP" | "SMS";
+  sub_account: boolean;
+  permissions: string[];
+  phone_verified: boolean;
+  email_verified: boolean;
+  is_active: boolean;
+  avatar_url?: string;
+  created_at: string;
+}
+
+export interface FetchAdminsResponse {
+  success: boolean;
+  count?: number;
+  users?: SuperAdminUser[];
+  message?: string;
 }

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { sessionResponse } from "./types";
+import { FetchAdminsResponse, sessionResponse } from "./types";
 import { parseISO, formatDistanceToNow } from "date-fns";
 
 // const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
@@ -279,6 +279,7 @@ export const createSuperAdminUserWorkspaceApi = async (payload: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      credentials: "include",
     });
     return await res.json();
   } catch (err) {
@@ -290,8 +291,33 @@ export const createSuperAdminUserWorkspaceApi = async (payload: {
   }
 };
 
+export const fetchAllSuperAdminsApi =
+  async (): Promise<FetchAdminsResponse> => {
+    try {
+      const response = await fetch("/api/master/admins", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
 
-export const fetchUserLogsApi = async (filters?: { action_type?: string; target_resource?: string }) => {
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("❌ Fetch All Super Admins Endpoint Exception:", error);
+      return {
+        success: false,
+        message:
+          "Network layer connection failure synchronizing admin registry data.",
+      };
+    }
+  };
+
+export const fetchUserLogsApi = async (filters?: {
+  action_type?: string;
+  target_resource?: string;
+}) => {
   try {
     let url = "/api/master/user-logs";
     if (filters) {
@@ -309,3 +335,137 @@ export const fetchUserLogsApi = async (filters?: { action_type?: string; target_
     return { success: false, logs: [] };
   }
 };
+
+// Helper to format 24h to AM/PM
+export const formatTime = (timeStr: string) => {
+  if (!timeStr) return "N/A";
+  const [hours, minutes] = timeStr.split(":");
+  const h = parseInt(hours);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const formattedHours = h % 12 || 12;
+  return `${formattedHours}:${minutes} ${ampm}`;
+};
+
+export const formatDate = (dateStr: string) => {
+  if (!dateStr) return "N/A";
+  const date = new Date(dateStr);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${day}-${month}-${year}`;
+};
+
+export async function updateAdminPermissionsApi(
+  userId: string,
+  permissions: string[],
+) {
+  try {
+    const response = await fetch(`/api/master/${userId}/permissions`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ permissions }),
+      credentials: "include",
+    });
+    return await response.json();
+  } catch (err) {
+    return {
+      success: false,
+      message:
+        "Network synchronization failure updating authorization layout map.",
+    };
+  }
+}
+
+export async function submitSuperAdminResetPasswordApi(payload: {
+  token: string;
+  password: string;
+  userId: string;
+}) {
+  try {
+    const response = await fetch("/api/master/reset-password", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      credentials: "include",
+    });
+    return await response.json();
+  } catch (err) {
+    return {
+      success: false,
+      message:
+        "Network handshake exception writing updated access credentials to database mapping.",
+    };
+  }
+}
+
+export async function forceOverrideSubAccountPasswordApi(subAccountId: string, newPassword: string) {
+  try {
+    const response = await fetch(`/api/master/${subAccountId}/override-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ newPassword }),
+      credentials: "include",
+    });
+    return await response.json();
+  } catch (err) {
+    return {
+      success: false,
+      message: "Network exception attempting administrative override pipeline transmission.",
+    };
+  }
+}
+
+/**
+ * 🔐 PERSISTENCE LAYER: Explicitly modify MFA policies for a target administrator instance
+ */
+export async function updateAdminMfaPolicyApi(userId: string, enforceMfa: boolean) {
+  try {
+    const response = await fetch(`/api/master/${userId}/mfa-policy`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ mfa_enabled: enforceMfa }),
+      credentials: "include",
+    });
+    return await response.json();
+  } catch (err) {
+    return { 
+      success: false, 
+      message: "Network synchronization failure updating security MFA policy configuration." 
+    };
+  }
+}
+
+export async function toggleAdminStatusApi(userId: string, targetActiveState: boolean) {
+  try {
+    const response = await fetch(`/api/master/${userId}/toggle-status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_active: targetActiveState }),
+    });
+    return await response.json();
+  } catch (err) {
+    return { success: false, message: "Network synchronization failure changing account status." };
+  }
+}
+
+
+export async function deleteAdminProfileApi(userId: string) {
+  try {
+    const response = await fetch(`/api/master/${userId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
+    return await response.json();
+  } catch (err) {
+    return { success: false, message: "Network failure executing hard deletion pipeline." };
+  }
+}

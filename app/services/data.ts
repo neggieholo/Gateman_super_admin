@@ -1,0 +1,64 @@
+import { PermissionNode } from "./types";
+
+export const SYSTEM_PERMISSIONS: PermissionNode[] = [
+  {
+    id: "all-access",
+    name: "Full Administrative Access",
+    parent_permission: null,
+  },
+  {
+    id: "users_management",
+    name: "Users Management (Root)",
+    parent_permission: null,
+  },
+  {
+    id: "view_users",
+    name: "View Users List",
+    parent_permission: "users_management",
+  },
+  {
+    id: "add_user",
+    name: "Add New Users",
+    parent_permission: "users_management",
+  },
+  {
+    id: "modify_users_status",
+    name: "Modify: Suspend & Enable Status",
+    parent_permission: "users_management",
+  },
+  {
+    id: "modify_user_permissions",
+    name: "Modify Permissions",
+    parent_permission: "users_management",
+  },
+  {
+    id: "modify_users_pass",
+    name: "Modify: Push Password Reset",
+    parent_permission: "users_management",
+  },
+  {
+    id: "modify_users_mfa",
+    name: "Modify: Overrule MFA Settings",
+    parent_permission: "users_management",
+  },
+  {
+    id: "delete_user",
+    name: "Delete User Profiles",
+    parent_permission: "users_management",
+  },
+  {
+    id: "logs_management",
+    name: "Logs & Security Audits (Root)",
+    parent_permission: null,
+  },
+  {
+    id: "view_user_logs",
+    name: "View User Activity Logs",
+    parent_permission: "logs_management",
+  },
+  {
+    id: "download_user_logs",
+    name: "Export & Download Forensic Audit Trails",
+    parent_permission: "logs_management",
+  },
+];

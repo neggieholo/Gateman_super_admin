@@ -4,11 +4,12 @@ import { useState } from "react";
 import { Building2, ChevronRight, Users, Wallet } from "lucide-react";
 import EstateManagementDetail from "./EstateManagementDetail"; // New Component
 import { ActiveEstate } from "../services/types";
-import { MOCK_ACTIVE_ESTATES } from "../services/Mock_data";
 
 export default function EstatesPage() {
-  const [selectedEstate, setSelectedEstate] = useState<ActiveEstate | null>(null);
-  const [estates, setEstates] = useState<ActiveEstate[]>(MOCK_ACTIVE_ESTATES); // Fetch this from /api/master/all-active
+  const [selectedEstate, setSelectedEstate] = useState<ActiveEstate | null>(
+    null,
+  );
+  const [estates, setEstates] = useState<ActiveEstate[]>([]); 
 
   if (selectedEstate) {
     return (

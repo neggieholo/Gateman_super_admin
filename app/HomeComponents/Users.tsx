@@ -8,22 +8,24 @@ import { toast } from "react-hot-toast";
 import { useUser } from "../UserContext";
 import UserLogsPage from "./UserLogsPage";
 
-
 // 🔐 TARGET TAB TO PERMISSION ARRAYS
 const TAB_PERMISSIONS = {
   users: "view_users",
   add: "add_user",
   logs: "view_user_logs",
+  my_logs: "view_user_logs",
 };
 
 export default function UsersPage() {
-  const [activeTab, setActiveTab] = useState<"users" | "add" | "logs">("users");
+  const [activeTab, setActiveTab] = useState<
+    "users" | "add" | "logs" | "my_logs"
+  >("users");
   const { user } = useUser();
 
   // 🧠 LIFECYCLE 1: Force immediate check on mount & clean up toasts on unmount
   useEffect(() => {
     const userPermissions = user?.permissions || [];
-    const hasAllAccess = userPermissions.includes("all_access");
+    const hasAllAccess = userPermissions.includes("all-access");
     const hasInitialAccess = userPermissions.includes(TAB_PERMISSIONS["users"]);
 
     // If they land on the page and have neither all_access nor view_users permission
@@ -57,7 +59,7 @@ export default function UsersPage() {
    */
   const handleTabSwitch = (targetTab: "users" | "add" | "logs") => {
     const userPermissions = user?.permissions || [];
-    const hasAllAccess = userPermissions.includes("all_access");
+    const hasAllAccess = userPermissions.includes("all-access");
     const hasRequiredPermission = userPermissions.includes(
       TAB_PERMISSIONS[targetTab],
     );
@@ -90,7 +92,7 @@ export default function UsersPage() {
   // 🛡️ Conditional execution layout guard: If user doesn't have access to the active tab, don't mount the page panels
   const currentPermissions = user?.permissions || [];
   const hasAccessToCurrentPanel =
-    currentPermissions.includes("all_access") ||
+    currentPermissions.includes("all-access") ||
     currentPermissions.includes(TAB_PERMISSIONS[activeTab]);
 
   return (
@@ -138,6 +140,12 @@ export default function UsersPage() {
             {activeTab === "users" && <ManageUsersPage />}
             {activeTab === "add" && <AddSuperAdmin />}
             {activeTab === "logs" && <UserLogsPage />}
+            {activeTab === "my_logs" && (
+              <UserLogsPage
+                isolatedAdminId={user?.id}
+                isolatedAdminName={user?.full_name}
+              />
+            )}
           </>
         ) : (
           <div className="p-8 text-center text-sm font-semibold text-slate-400 bg-slate-50 rounded-2xl border border-dashed">
