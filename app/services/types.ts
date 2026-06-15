@@ -103,6 +103,7 @@ export enum ViewState {
   REQUESTS = "requests",
   ADD_USER = "add_user",
   ESTATES = "estates",
+  SECURITY = "security",
 }
 
 export interface UserContextType {
@@ -221,7 +222,6 @@ export interface UserLogEntry {
   created_at: string;
 }
 
-
 export interface SuperAdminUser {
   id: string;
   full_name: string;
@@ -242,5 +242,40 @@ export interface FetchAdminsResponse {
   success: boolean;
   count?: number;
   users?: SuperAdminUser[];
+  message?: string;
+}
+
+export interface NetworkNode {
+  id: string;
+  name: string;
+  email: string;
+  ip: string;
+  location: string;
+  device: string;
+}
+
+export interface RuleNode {
+  id: string;
+  network: string;
+  type: "ALLOW" | "DENY";
+  label: string;
+  addedBy: string;
+}
+
+export interface MatrixResponse {
+  success: boolean;
+  liveConnections: NetworkNode[];
+  pendingRequests: NetworkNode[];
+  message?: string;
+}
+
+export interface RulesResponse {
+  success: boolean;
+  rules: RuleNode[];
+  message?: string;
+}
+
+export interface StandardActionResponse {
+  success: boolean;
   message?: string;
 }

@@ -8,6 +8,7 @@ import {
   Inbox,
   User2,
   Users,
+  Shield,
 } from "lucide-react";
 import { ViewState } from "../services/types";
 import { useUser } from "../UserContext";
@@ -33,12 +34,17 @@ export default function SideBar({
   const router = useRouter();
   const pathname = usePathname();
 
-  const handleLogout = async() => {    
-    router.push("/");
-    setUser(null);
-    await postLogout();
-    localStorage.removeItem("rememberMe");
-    sessionStorage.setItem("loggedOut", "true");
+  const handleLogout = async () => {
+    try {
+      await postLogout();
+    } catch (error) {
+      console.error("Backend session termination failed:", error);
+    } finally {
+      localStorage.removeItem("rememberMe");
+      sessionStorage.setItem("loggedOut", "true");
+      router.push("/");
+      setUser(null);
+    }
   };
 
   const navItems = [
@@ -49,16 +55,16 @@ export default function SideBar({
       url: "/home/dashboard",
     },
     {
-      id: ViewState.REQUESTS,
-      label: "Requests",
-      icon: Inbox,
-      url: "/home/requests",
-    },
-    {
       id: ViewState.ADD_USER,
       label: "Users",
       icon: Users,
       url: "/home/add_user",
+    },
+    {
+      id: ViewState.SECURITY,
+      label: "Security",
+      icon: Shield,
+      url: "/home/security",
     },
     {
       id: ViewState.ESTATES,
@@ -75,7 +81,7 @@ export default function SideBar({
   return (
     <>
       <aside
-        className={`${isOpen ? "" : "hidden"} flex flex-col w-fit p-4 bg-gm-charcoal h-screen border-r border-slate-100 z-50 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)]`}
+        className={`${isOpen ? "" : "hidden"} flex flex-col w-60 p-4 bg-gm-charcoal h-screen border-r border-slate-100 z-50 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)]`}
       >
         <div className="p-8 flex items-center space-x-3">
           <div className="relative w-full h-14 backdrop-blur-md rounded-xl flex items-center justify-center overflow-hidden">
@@ -133,9 +139,9 @@ export default function SideBar({
               <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></div>
             </div>
             <div className="flex flex-col items-start flex-1 min-w-0">
-              <span className="text-sm font-bold text-white truncate w-full text-left group-hover:text-indigo-700 transition-colors">
+              {/* <span className="text-sm font-bold text-white truncate w-full text-left group-hover:text-indigo-700 transition-colors">
                 {user?.full_name}
-              </span>
+              </span> */}
               <div className="flex items-center mt-0.5">
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide ${getRoleBadgeColor()}`}

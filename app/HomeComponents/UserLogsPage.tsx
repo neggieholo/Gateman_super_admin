@@ -224,9 +224,9 @@ export default function UserLogsPage({
                 <th className="p-4 text-[10px] font-oswald font-black text-slate-400 uppercase tracking-widest">
                   Administrator
                 </th>
-                <th className="p-4 text-[10px] font-oswald font-black text-slate-400 uppercase tracking-widest">
+                {/* <th className="p-4 text-[10px] font-oswald font-black text-slate-400 uppercase tracking-widest">
                   Action Scope
-                </th>
+                </th> */}
                 <th className="p-4 text-[10px] font-oswald font-black text-slate-400 uppercase tracking-widest">
                   User Activity Trace Log
                 </th>
@@ -295,11 +295,11 @@ export default function UserLogsPage({
                           </span>
                         </div>
                       </td>
-                      <td className="p-4 whitespace-nowrap">
+                      {/* <td className="p-4 whitespace-nowrap">
                         <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-slate-900 text-white tracking-tight uppercase">
                           {log.action_type}
                         </span>
-                      </td>
+                      </td> */}
                       <td className="p-4 text-slate-500 font-medium min-w-70 max-w-md leading-relaxed">
                         {log.description}
                       </td>

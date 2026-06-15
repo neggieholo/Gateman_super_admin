@@ -132,7 +132,42 @@ export default function Auth() {
     setError(null);
 
     try {
-      // Both branches hit your unified login verification gate
+      let coordinates = null;
+
+      if (navigator.geolocation) {
+        try {
+          // 🎯 Explicitly define the Promise return signature as GeolocationPosition
+          const position = await new Promise<GeolocationPosition>(
+            (resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 7000,
+              });
+            },
+          );
+
+          coordinates = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+        } catch (geoError: any) {
+          if (geoError.code === geoError.PERMISSION_DENIED) {
+            setError(
+              "Access Denied: Administrative security policy requires location verification.",
+            );
+            setLoading(false);
+            return;
+          }
+
+          console.warn(
+            "Hardware position unavailable. Falling back safely to IP anchoring.",
+          );
+        }
+      } else {
+        console.warn(
+          "Browser environment does not support geolocation metrics.",
+        );
+      }
       const response = await fetch("/api/master/verify-otp-only", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -142,6 +177,7 @@ export default function Auth() {
           type: mfaType === "TOTP" ? "totp" : "email",
           metadata: mfaType === "EMAIL" ? metadata : undefined,
           rememberMe: rememberMe,
+          coordinates
         }),
       });
 
@@ -194,7 +230,50 @@ export default function Auth() {
           throw new Error(res.message || "Failed to send reset link");
         }
       } else {
-        const data = await db.authenticate(email, password, rememberMe);
+        let coordinates = null;
+
+        if (navigator.geolocation) {
+          try {
+            // 🎯 Explicitly define the Promise return signature as GeolocationPosition
+            const position = await new Promise<GeolocationPosition>(
+              (resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                  enableHighAccuracy: true,
+                  timeout: 7000,
+                });
+              },
+            );
+
+            coordinates = {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            };
+          } catch (geoError:any) {
+            if (geoError.code === geoError.PERMISSION_DENIED) {
+              setError(
+                "Access Denied: Administrative security policy requires location verification.",
+              );
+              setLoading(false);
+              return;
+            }
+
+            console.warn(
+              "Hardware position unavailable. Falling back safely to IP anchoring.",
+            );
+          }
+        } else {
+          console.warn(
+            "Browser environment does not support geolocation metrics.",
+          );
+        }
+
+        
+        const data = await db.authenticate(
+          email,
+          password,
+          rememberMe,
+          coordinates,
+        );
         if (
           !data ||
           (typeof data === "string" && data.includes("<!DOCTYPE html>"))

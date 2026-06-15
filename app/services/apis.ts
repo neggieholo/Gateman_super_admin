@@ -52,6 +52,7 @@ export const sendPofileChangeOtpApi = async (target: string, type: string) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target, type }),
+      credentials: "include",
     });
     return await res.json();
   } catch (err) {
@@ -110,8 +111,7 @@ export const fetchReadableAddress = async (locationData: string) => {
     const data = await response.json();
 
     return (
-      data.display_name ||
-      data.address ||
+      `${data.address.state}, ${data.address.country}` ||
       `${lat.toFixed(4)}, ${lng.toFixed(4)}`
     );
   } catch (error) {

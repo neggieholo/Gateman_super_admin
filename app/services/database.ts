@@ -10,13 +10,14 @@ export const db = {
     email: string,
     password: string,
     rememberMe: boolean,
+    coordinates: { latitude: number; longitude: number } | null,
   ) => {
     try {
       const res = await fetch("/api/auth/login/super-admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // Added 'name' as the required signature
-        body: JSON.stringify({ email, password, rememberMe }),
+        body: JSON.stringify({ email, password, rememberMe, coordinates }),
         credentials: "include",
       });
 

@@ -61,4 +61,24 @@ export const SYSTEM_PERMISSIONS: PermissionNode[] = [
     name: "Export & Download Forensic Audit Trails",
     parent_permission: "logs_management",
   },
+  {
+    id: "security_infrastructure",
+    name: "Security Infrastructure (Root)",
+    parent_permission: null,
+  },
+  {
+    id: "view_security_perimeter",
+    name: "View & Manage Network Perimeter",
+    parent_permission: "security_infrastructure",
+  },
+  {
+    id: "view_security_policies",
+    name: "View & Configure System Policies",
+    parent_permission: "security_infrastructure",
+  },
+  {
+    id: "view_security_incidents",
+    name: "View & Triage Security Incidents",
+    parent_permission: "security_infrastructure",
+  },
 ];

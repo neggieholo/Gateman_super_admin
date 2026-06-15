@@ -87,7 +87,9 @@ export default function Settings() {
     profile.phone !== (user?.phone_number || "") ||
     profile.mfa_enabled !== user?.mfa_enabled ||
     profile.mfa_type !== user?.mfa_type ||
-    profile.avatarUrl !== (user?.avatar_url || "");
+    profile.avatarUrl !== (user?.avatar_url || "") ||
+    profile.email_verified !== user?.email_verified ||
+    profile.phone_verified !== user?.phone_verified;
 
   useEffect(() => {
     if (user) {

@@ -26,7 +26,9 @@ export default function UsersPage() {
   useEffect(() => {
     const userPermissions = user?.permissions || [];
     const hasAllAccess = userPermissions.includes("all-access");
-    const hasInitialAccess = userPermissions.includes(TAB_PERMISSIONS["users"]);
+    const hasInitialAccess =
+      userPermissions.includes(TAB_PERMISSIONS["users"]) ||
+      userPermissions.includes("users_management");
 
     // If they land on the page and have neither all_access nor view_users permission
     if (!hasAllAccess && !hasInitialAccess) {
@@ -60,9 +62,9 @@ export default function UsersPage() {
   const handleTabSwitch = (targetTab: "users" | "add" | "logs") => {
     const userPermissions = user?.permissions || [];
     const hasAllAccess = userPermissions.includes("all-access");
-    const hasRequiredPermission = userPermissions.includes(
-      TAB_PERMISSIONS[targetTab],
-    );
+    const hasRequiredPermission =
+      userPermissions.includes(TAB_PERMISSIONS[targetTab]) ||
+      userPermissions.includes("users_management");
 
     // Clear any previous error toasts before checking the next action tab state
     toast.dismiss("unauthorized-users-page-lock");
@@ -93,7 +95,8 @@ export default function UsersPage() {
   const currentPermissions = user?.permissions || [];
   const hasAccessToCurrentPanel =
     currentPermissions.includes("all-access") ||
-    currentPermissions.includes(TAB_PERMISSIONS[activeTab]);
+    currentPermissions.includes(TAB_PERMISSIONS[activeTab]) ||
+    currentPermissions.includes("users_management");
 
   return (
     <div className="space-y-6 p-4 sm:p-6 font-sans flex flex-col">
