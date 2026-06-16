@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldAlert,
   Save,
@@ -10,95 +9,72 @@ import {
   Fingerprint,
   UserCheck,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
-import { toast } from "react-hot-toast";
-
-interface PolicyState {
-  // Session Timeouts
-  sessionTimeoutMinutes: number;
-  rememberMeDurationDays: number;
-  absoluteTimeoutHours: number;
-
-  // Password Setup Requirements
-  pwdMinLength: number;
-  pwdRequireUppercase: boolean;
-  pwdRequireLowercase: boolean;
-  pwdRequireNumbers: boolean;
-  pwdRequireSymbols: boolean;
-  pwdPreventReuseCount: number;
-  pwdExpiryDays: number;
-
-  // Interceptor Gate Mechanics
-  enforceActionAcceptanceBeforeLogin: boolean;
-  requireMfaForSubaccounts: boolean;
-  maxLoginAttemptsBeforeLockout: number;
-  lockoutDurationMinutes: number;
-}
+import { useSystemPolicies } from "../hooks/useSystemPolicies";
+import { SystemPolicySettings } from "../services/types";
+import { showAccessDeniedToast } from "./ManageUsersPage";
+import { useUser } from "../UserContext";
 
 export default function SystemPoliciesPage() {
+  const {user} = useUser();
+  const { policies, setPolicies, loading, updating, mutatePolicies } =
+    useSystemPolicies();
   const [globalLoading, setGlobalLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [policies, setPolicies] = useState<PolicyState>({
-    sessionTimeoutMinutes: 30,
-    rememberMeDurationDays: 30,
-    absoluteTimeoutHours: 24,
-    pwdMinLength: 8,
-    pwdRequireUppercase: true,
-    pwdRequireLowercase: true,
-    pwdRequireNumbers: true,
-    pwdRequireSymbols: true,
-    pwdPreventReuseCount: 3,
-    pwdExpiryDays: 90,
-    enforceActionAcceptanceBeforeLogin: false,
-    requireMfaForSubaccounts: true,
-    maxLoginAttemptsBeforeLockout: 5,
-    lockoutDurationMinutes: 15,
-  });
 
-  const fetchPoliciesData = useCallback(async () => {
-    setGlobalLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-    } catch (err) {
-      toast.error("Failed to load core system security policies.");
-    } finally {
-      setGlobalLoading(false);
-    }
-  }, []);
-
+  // 🛰️ Synchronize the hook loading state safely into component layout
   useEffect(() => {
-    fetchPoliciesData();
-  }, [fetchPoliciesData]);
+    const initialization = () => {
+      if (!loading) {
+        setGlobalLoading(false);
+      }
+    };
 
-  const handleCheckboxChange = (key: keyof PolicyState) => {
-    setPolicies((prev) => ({
-      ...prev,
-      [key]: !prev[key] as any,
-    }));
+    initialization();
+  }, [loading]);
+
+  // 🔄 Handles toggling boolean properties within the state layout
+  const handleCheckboxChange = (key: keyof SystemPolicySettings) => {
+    if (!policies) return;
+    setPolicies({
+      ...policies,
+      [key]: !policies[key],
+    });
   };
 
-  const handleNumberChange = (key: keyof PolicyState, val: string) => {
+  // 🔢 Handles structural number parses for input string configurations
+  const handleNumberChange = (key: keyof SystemPolicySettings, val: string) => {
+    if (!policies) return;
     const num = parseInt(val, 10);
-    setPolicies((prev) => ({
-      ...prev,
+    setPolicies({
+      ...policies,
       [key]: isNaN(num) ? 0 : num,
-    }));
+    });
   };
 
+  // 💾 Triggers update data mutation pipeline down to Express routing matrix
   const handleSavePolicies = async (e: React.FormEvent) => {
     e.preventDefault();
-    setActionLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("System policy configurations saved and updated globally.");
-    } catch (err) {
-      toast.error("An error occurred while saving system settings.");
-    } finally {
-      setActionLoading(false);
+    const canChangeEditPolicies =
+      user?.permissions.includes("security_infrastructure") ||
+      user?.permissions.includes("edit_system_policies") ||
+      user?.permissions.includes("all_access");
+
+    if (!canChangeEditPolicies) {
+      showAccessDeniedToast();
+      return;
+    }
+    if (!policies) return;
+
+    const success = await mutatePolicies(policies);
+    if (!success) {
+      console.error(
+        "Policy compilation rejected by core system parsing arrays.",
+      );
     }
   };
 
-  if (globalLoading) {
+  if (globalLoading || !policies) {
     return (
       <div className="p-12 text-center text-xs font-bold uppercase tracking-widest text-slate-400 flex flex-col items-center justify-center gap-3">
         <div className="w-6 h-6 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
@@ -110,16 +86,18 @@ export default function SystemPoliciesPage() {
   return (
     <form
       onSubmit={handleSavePolicies}
-      className={`space-y-6 animate-in fade-in duration-200 ${actionLoading ? "pointer-events-none opacity-60" : ""}`}
+      className={`space-y-6 animate-in fade-in duration-200 ${updating ? "pointer-events-none opacity-60" : ""}`}
     >
       {/* 🛡️ PAGE HEADER DESCRIPTIVE SUMMARY BANNER */}
       <div className="bg-slate-900 text-white p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow">
         <div>
           <h2 className="text-lg font-bold uppercase tracking-wider flex items-center gap-2 text-white">
-            <ShieldAlert size={20} className="text-amber-400" /> System Security & Access Policies
+            <ShieldAlert size={20} className="text-amber-400" /> System Security
+            & Access Policies
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Configure global timeouts, account lockout parameters, password strictness layouts, and mandatory policy acceptance screens.
+            Configure global timeouts, account lockout parameters, password
+            strictness layouts, and mandatory policy acceptance screens.
           </p>
         </div>
       </div>
@@ -152,7 +130,7 @@ export default function SystemPoliciesPage() {
                 type="number"
                 min="5"
                 max="1440"
-                value={policies.sessionTimeoutMinutes}
+                value={policies.sessionTimeoutMinutes || ""}
                 onChange={(e) =>
                   handleNumberChange("sessionTimeoutMinutes", e.target.value)
                 }
@@ -171,14 +149,15 @@ export default function SystemPoliciesPage() {
                 type="number"
                 min="1"
                 max="168"
-                value={policies.absoluteTimeoutHours}
+                value={policies.absoluteTimeoutHours || ""}
                 onChange={(e) =>
                   handleNumberChange("absoluteTimeoutHours", e.target.value)
                 }
                 className="w-full text-xs font-mono border border-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-slate-900 transition-colors"
               />
               <span className="text-[10px] text-slate-400 mt-1 block">
-                Forces a clean login security handshake regardless of active usage.
+                Forces a clean login security handshake regardless of active
+                usage.
               </span>
             </div>
 
@@ -190,14 +169,15 @@ export default function SystemPoliciesPage() {
                 type="number"
                 min="1"
                 max="365"
-                value={policies.rememberMeDurationDays}
+                value={policies.rememberMeDurationDays || ""}
                 onChange={(e) =>
                   handleNumberChange("rememberMeDurationDays", e.target.value)
                 }
                 className="w-full text-xs font-mono border border-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-slate-900 transition-colors"
               />
               <span className="text-[10px] text-slate-400 mt-1 block">
-                Sets maximum cookie longevity boundaries for trusted local browsers.
+                Sets maximum cookie longevity boundaries for trusted local
+                browsers.
               </span>
             </div>
           </div>
@@ -216,7 +196,8 @@ export default function SystemPoliciesPage() {
                 Brute Force Defenses
               </h3>
               <p className="text-[11px] text-slate-400">
-                Throttling thresholds to isolate and lock down accounts against attack loops.
+                Throttling thresholds to isolate and lock down accounts against
+                attack loops.
               </p>
             </div>
           </div>
@@ -230,7 +211,7 @@ export default function SystemPoliciesPage() {
                 type="number"
                 min="3"
                 max="20"
-                value={policies.maxLoginAttemptsBeforeLockout}
+                value={policies.maxLoginAttemptsBeforeLockout || ""}
                 onChange={(e) =>
                   handleNumberChange(
                     "maxLoginAttemptsBeforeLockout",
@@ -252,14 +233,15 @@ export default function SystemPoliciesPage() {
                 type="number"
                 min="1"
                 max="1440"
-                value={policies.lockoutDurationMinutes}
+                value={policies.lockoutDurationMinutes || ""}
                 onChange={(e) =>
                   handleNumberChange("lockoutDurationMinutes", e.target.value)
                 }
                 className="w-full text-xs font-mono border border-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-slate-900 transition-colors"
               />
               <span className="text-[10px] text-slate-400 mt-1 block">
-                Cooldown separation time enforced before resetting account access.
+                Cooldown separation time enforced before resetting account
+                access.
               </span>
             </div>
           </div>
@@ -268,7 +250,7 @@ export default function SystemPoliciesPage() {
             <label className="flex items-start gap-3 cursor-pointer group selection:bg-transparent">
               <input
                 type="checkbox"
-                checked={policies.requireMfaForSubaccounts}
+                checked={policies.requireMfaForSubaccounts || false}
                 onChange={() =>
                   handleCheckboxChange("requireMfaForSubaccounts")
                 }
@@ -279,7 +261,8 @@ export default function SystemPoliciesPage() {
                   Enforce Multi-Factor Authentication (MFA)
                 </span>
                 <span className="text-[10px] text-slate-400 block mt-0.5">
-                  Forces all administrative subaccounts to verify login steps using authenticator app keys.
+                  Forces all administrative subaccounts to verify login steps
+                  using authenticator app keys.
                 </span>
               </div>
             </label>
@@ -299,7 +282,8 @@ export default function SystemPoliciesPage() {
                 Password Strength Requirements
               </h3>
               <p className="text-[11px] text-slate-400">
-                Enforce validation parameters when users create or rotate login credentials.
+                Enforce validation parameters when users create or rotate login
+                credentials.
               </p>
             </div>
           </div>
@@ -315,7 +299,7 @@ export default function SystemPoliciesPage() {
                   type="number"
                   min="6"
                   max="64"
-                  value={policies.pwdMinLength}
+                  value={policies.pwdMinLength || ""}
                   onChange={(e) =>
                     handleNumberChange("pwdMinLength", e.target.value)
                   }
@@ -331,7 +315,7 @@ export default function SystemPoliciesPage() {
                   type="number"
                   min="0"
                   max="365"
-                  value={policies.pwdExpiryDays}
+                  value={policies.pwdExpiryDays || ""}
                   onChange={(e) =>
                     handleNumberChange("pwdExpiryDays", e.target.value)
                   }
@@ -350,14 +334,15 @@ export default function SystemPoliciesPage() {
                   type="number"
                   min="0"
                   max="12"
-                  value={policies.pwdPreventReuseCount}
+                  value={policies.pwdPreventReuseCount || ""}
                   onChange={(e) =>
                     handleNumberChange("pwdPreventReuseCount", e.target.value)
                   }
                   className="w-full text-xs font-mono border border-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-slate-900 transition-colors"
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  Validates against a history list of previous cryptographic hashes.
+                  Validates against a history list of previous cryptographic
+                  hashes.
                 </span>
               </div>
             </div>
@@ -372,7 +357,7 @@ export default function SystemPoliciesPage() {
                 <label className="flex items-center gap-3 cursor-pointer group selection:bg-transparent bg-slate-50 p-3 rounded-xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
                   <input
                     type="checkbox"
-                    checked={policies.pwdRequireUppercase}
+                    checked={policies.pwdRequireUppercase || false}
                     onChange={() => handleCheckboxChange("pwdRequireUppercase")}
                     className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 h-4 w-4 accent-slate-900"
                   />
@@ -389,7 +374,7 @@ export default function SystemPoliciesPage() {
                 <label className="flex items-center gap-3 cursor-pointer group selection:bg-transparent bg-slate-50 p-3 rounded-xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
                   <input
                     type="checkbox"
-                    checked={policies.pwdRequireLowercase}
+                    checked={policies.pwdRequireLowercase || false}
                     onChange={() => handleCheckboxChange("pwdRequireLowercase")}
                     className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 h-4 w-4 accent-slate-900"
                   />
@@ -406,7 +391,7 @@ export default function SystemPoliciesPage() {
                 <label className="flex items-center gap-3 cursor-pointer group selection:bg-transparent bg-slate-50 p-3 rounded-xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
                   <input
                     type="checkbox"
-                    checked={policies.pwdRequireNumbers}
+                    checked={policies.pwdRequireNumbers || false}
                     onChange={() => handleCheckboxChange("pwdRequireNumbers")}
                     className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 h-4 w-4 accent-slate-900"
                   />
@@ -423,7 +408,7 @@ export default function SystemPoliciesPage() {
                 <label className="flex items-center gap-3 cursor-pointer group selection:bg-transparent bg-slate-50 p-3 rounded-xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
                   <input
                     type="checkbox"
-                    checked={policies.pwdRequireSymbols}
+                    checked={policies.pwdRequireSymbols || false}
                     onChange={() => handleCheckboxChange("pwdRequireSymbols")}
                     className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 h-4 w-4 accent-slate-900"
                   />
@@ -454,7 +439,8 @@ export default function SystemPoliciesPage() {
                 Estate Policy Management Gates
               </h3>
               <p className="text-[11px] text-slate-400">
-                Configure conditional intercept criteria applied before granting admin workspace entry.
+                Configure conditional intercept criteria applied before granting
+                admin workspace entry.
               </p>
             </div>
           </div>
@@ -465,7 +451,10 @@ export default function SystemPoliciesPage() {
                 Force Policy Rule Acceptance Modal on Login
               </span>
               <p className="text-[11px] text-slate-400 max-w-2xl">
-                When enabled, all staff and estate managers must explicitly review and accept updated operational declarations or security terms in an overlay popup window before accessing their dashboards.
+                When enabled, all staff and estate managers must explicitly
+                review and accept updated operational declarations or security
+                terms in an overlay popup window before accessing their
+                dashboards.
               </p>
             </div>
 
@@ -473,7 +462,7 @@ export default function SystemPoliciesPage() {
               <input
                 type="checkbox"
                 id="actionAcceptanceToggle"
-                checked={policies.enforceActionAcceptanceBeforeLogin}
+                checked={policies.enforceActionAcceptanceBeforeLogin || false}
                 onChange={() =>
                   handleCheckboxChange("enforceActionAcceptanceBeforeLogin")
                 }
@@ -497,17 +486,26 @@ export default function SystemPoliciesPage() {
         <div className="flex items-center gap-2 text-slate-500 text-xs">
           <RefreshCw
             size={14}
-            className={actionLoading ? "animate-spin text-slate-900" : ""}
+            className={updating ? "animate-spin text-slate-900" : ""}
           />
           <span>Configuration policy rules map ready for compilation.</span>
         </div>
         <button
           type="submit"
-          disabled={actionLoading}
+          disabled={updating}
           className="px-6 py-2.5 bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-400 rounded-xl text-xs font-bold uppercase tracking-wider shadow transition-all flex items-center gap-2"
         >
-          <Save size={14} />
-          {actionLoading ? "Saving Policy Matrices..." : "Save Policy Schema"}
+          {updating ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Saving Policy Matrices...
+            </>
+          ) : (
+            <>
+              <Save size={14} />
+              Save Policy
+            </>
+          )}
         </button>
       </div>
     </form>

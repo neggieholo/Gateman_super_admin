@@ -279,3 +279,34 @@ export interface StandardActionResponse {
   success: boolean;
   message?: string;
 }
+
+// ../services/types.ts
+
+export interface SystemPolicySettings {
+  sessionTimeoutMinutes: number;
+  rememberMeDurationDays: number;
+  absoluteTimeoutHours: number;
+  pwdMinLength: number;
+  pwdRequireUppercase: boolean;
+  pwdRequireLowercase: boolean;
+  pwdRequireNumbers: boolean;
+  pwdRequireSymbols: boolean;
+  pwdPreventReuseCount: number;
+  pwdExpiryDays: number;
+  maxLoginAttemptsBeforeLockout: number;
+  lockoutDurationMinutes: number;
+  requireMfaForSubaccounts: boolean;
+  enforceActionAcceptanceBeforeLogin: boolean;
+  updatedAt?: string;
+}
+
+export interface FetchPoliciesResponse {
+  success: boolean;
+  policies?: SystemPolicySettings;
+  message?: string;
+}
+
+export interface UpdatePoliciesResponse {
+  success: boolean;
+  message: string;
+}

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { MatrixResponse, RulesResponse, StandardActionResponse } from "./types";
+import { FetchPoliciesResponse, MatrixResponse, RulesResponse, StandardActionResponse, SystemPolicySettings, UpdatePoliciesResponse } from "./types";
 
 // const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -105,3 +105,74 @@ export async function deleteFirewallRule(
     throw new Error("HTTP error deploying firewall rule dropping logic");
   return res.json();
 }
+
+export const getSystemPolicies = async (): Promise<FetchPoliciesResponse> => {
+  try {
+    const response = await fetch('/api/master/security/system-policies', {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || `HTTP error! status: ${response.status}`,
+      };
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error("Failed downstream link capturing system policies:", error);
+    return {
+      success: false,
+      message:
+        error.message ||
+        "Network link failure resolving system security policies.",
+    };
+  }
+};
+
+/**
+ * 💾 Commit modified administrative policy settings down to the data persistence layer.
+ */
+export const updateSystemPolicies = async (
+  policyPayload: SystemPolicySettings,
+): Promise<UpdatePoliciesResponse> => {
+  try {
+    const response = await fetch('/api/master/security/system-policies/update', {
+      method: "POST",
+      credentials: "include", 
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(policyPayload),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || `HTTP error! status: ${response.status}`,
+      };
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error(
+      "Pipeline failure committing schema rule modifications:",
+      error,
+    );
+    return {
+      success: false,
+      message:
+        error.message ||
+        "Communication pipeline block updating system rule layouts.",
+    };
+  }
+};
