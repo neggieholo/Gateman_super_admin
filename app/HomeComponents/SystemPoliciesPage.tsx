@@ -10,12 +10,8 @@ import {
   Fingerprint,
   UserCheck,
   RefreshCw,
-  HelpCircle,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-
-// Assuming you have these endpoints matching your standard naming layouts
-// import { getSystemPolicies, updateSystemPolicies } from "../services/apis_sec";
 
 interface PolicyState {
   // Session Timeouts
@@ -62,16 +58,9 @@ export default function SystemPoliciesPage() {
   const fetchPoliciesData = useCallback(async () => {
     setGlobalLoading(true);
     try {
-      // Mocking API call execution vector matching your dashboard infrastructure
-      // const res = await getSystemPolicies();
-      // if (res.success) setPolicies(res.data);
-
-      // Artificial delay simulation for re-hydration pipelines
       await new Promise((resolve) => setTimeout(resolve, 600));
     } catch (err) {
-      toast.error(
-        "Failed to parse core administrative policy parameters layout.",
-      );
+      toast.error("Failed to load core system security policies.");
     } finally {
       setGlobalLoading(false);
     }
@@ -100,17 +89,10 @@ export default function SystemPoliciesPage() {
     e.preventDefault();
     setActionLoading(true);
     try {
-      // Simulated backend API pipeline delivery matching your api_sec schema patterns
-      // const data = await updateSystemPolicies(policies);
       await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      toast.success(
-        "Security perimeter configuration matrix compiled and deployed globally.",
-      );
+      toast.success("System policy configurations saved and updated globally.");
     } catch (err) {
-      toast.error(
-        "Exception processing serialization arrays over network connection loops.",
-      );
+      toast.error("An error occurred while saving system settings.");
     } finally {
       setActionLoading(false);
     }
@@ -120,7 +102,7 @@ export default function SystemPoliciesPage() {
     return (
       <div className="p-12 text-center text-xs font-bold uppercase tracking-widest text-slate-400 flex flex-col items-center justify-center gap-3">
         <div className="w-6 h-6 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
-        Decrypting Operational Policy Configurations...
+        Loading Global System Policies...
       </div>
     );
   }
@@ -133,28 +115,18 @@ export default function SystemPoliciesPage() {
       {/* 🛡️ PAGE HEADER DESCRIPTIVE SUMMARY BANNER */}
       <div className="bg-slate-900 text-white p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow">
         <div>
-          <h2 className="text-lg font-bold font-oswald uppercase tracking-wider flex items-center gap-2 text-white">
-            <ShieldAlert size={20} className="text-amber-400" /> Core Security
-            Perimeter Policies
+          <h2 className="text-lg font-bold uppercase tracking-wider flex items-center gap-2 text-white">
+            <ShieldAlert size={20} className="text-amber-400" /> System Security & Access Policies
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Configure access token expiration states, server authentication
-            vectors, password strictness layouts, and pre-flight compliance
-            interceptors.
+            Configure global timeouts, account lockout parameters, password strictness layouts, and mandatory policy acceptance screens.
           </p>
         </div>
-        <button
-          type="submit"
-          disabled={actionLoading}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow transition-all self-end sm:self-auto"
-        >
-          <Save size={14} /> Commit Changes
-        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ==========================================
-            ⏱️ SECTION 1: SESSION TIMEOUTS & TTL MATRIX
+            ⏱️ SECTION 1: SESSION TIMEOUTS
             ========================================== */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
@@ -166,7 +138,7 @@ export default function SystemPoliciesPage() {
                 Session Lifecycle Settings
               </h3>
               <p className="text-[11px] text-slate-400">
-                Manage runtime state longevity on administrative endpoints.
+                Manage runtime active token state longevity on user devices.
               </p>
             </div>
           </div>
@@ -187,13 +159,13 @@ export default function SystemPoliciesPage() {
                 className="w-full text-xs font-mono border border-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-slate-900 transition-colors"
               />
               <span className="text-[10px] text-slate-400 mt-1 block">
-                Closes active Express-session row if idle.
+                Closes active session rows automatically if left idle.
               </span>
             </div>
 
             <div>
               <label className="block text-[11px] uppercase tracking-wider font-bold text-slate-400 mb-1">
-                Absolute Session Maximum Duration (Hours)
+                Absolute Max Session Duration (Hours)
               </label>
               <input
                 type="number"
@@ -206,7 +178,7 @@ export default function SystemPoliciesPage() {
                 className="w-full text-xs font-mono border border-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-slate-900 transition-colors"
               />
               <span className="text-[10px] text-slate-400 mt-1 block">
-                Forces complete re-auth independent of activity.
+                Forces a clean login security handshake regardless of active usage.
               </span>
             </div>
 
@@ -225,14 +197,14 @@ export default function SystemPoliciesPage() {
                 className="w-full text-xs font-mono border border-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-slate-900 transition-colors"
               />
               <span className="text-[10px] text-slate-400 mt-1 block">
-                Longevity footprint limit mapping persistent client cookies.
+                Sets maximum cookie longevity boundaries for trusted local browsers.
               </span>
             </div>
           </div>
         </div>
 
         {/* ==========================================
-            🛡️ SECTION 2: AUTHENTICATION LOCKOUT GATE
+            🛡️ SECTION 2: BRUTE FORCE & LOCKOUT GATE
             ========================================== */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
@@ -244,8 +216,7 @@ export default function SystemPoliciesPage() {
                 Brute Force Defenses
               </h3>
               <p className="text-[11px] text-slate-400">
-                Configure thresholds to lock down accounts against intrusion
-                loops.
+                Throttling thresholds to isolate and lock down accounts against attack loops.
               </p>
             </div>
           </div>
@@ -253,7 +224,7 @@ export default function SystemPoliciesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             <div>
               <label className="block text-[11px] uppercase tracking-wider font-bold text-slate-400 mb-1">
-                Max Failed Verification Attempts
+                Max Failed Login Attempts
               </label>
               <input
                 type="number"
@@ -269,13 +240,13 @@ export default function SystemPoliciesPage() {
                 className="w-full text-xs font-mono border border-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-slate-900 transition-colors"
               />
               <span className="text-[10px] text-slate-400 mt-1 block">
-                Attempts allowed before throttling is deployed.
+                Number of failures permitted before a lock action triggers.
               </span>
             </div>
 
             <div>
               <label className="block text-[11px] uppercase tracking-wider font-bold text-slate-400 mb-1">
-                Lockout Penalization Window (Minutes)
+                Lockout Window Duration (Minutes)
               </label>
               <input
                 type="number"
@@ -288,7 +259,7 @@ export default function SystemPoliciesPage() {
                 className="w-full text-xs font-mono border border-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-slate-900 transition-colors"
               />
               <span className="text-[10px] text-slate-400 mt-1 block">
-                Cooldown span isolating target subnet node rules.
+                Cooldown separation time enforced before resetting account access.
               </span>
             </div>
           </div>
@@ -305,11 +276,10 @@ export default function SystemPoliciesPage() {
               />
               <div>
                 <span className="text-xs font-bold text-slate-700 group-hover:text-slate-900 transition-colors block">
-                  Enforce TOTP Multi-Factor Authentication (MFA)
+                  Enforce Multi-Factor Authentication (MFA)
                 </span>
                 <span className="text-[10px] text-slate-400 block mt-0.5">
-                  Forces all administrative subaccounts to verify authentication
-                  states using generated cryptographic app keys.
+                  Forces all administrative subaccounts to verify login steps using authenticator app keys.
                 </span>
               </div>
             </label>
@@ -326,11 +296,10 @@ export default function SystemPoliciesPage() {
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                Credential String Complexity Requirements
+                Password Strength Requirements
               </h3>
               <p className="text-[11px] text-slate-400">
-                Enforce schema matching rules when users rotate encryption keys
-                inside databases.
+                Enforce validation parameters when users create or rotate login credentials.
               </p>
             </div>
           </div>
@@ -356,7 +325,7 @@ export default function SystemPoliciesPage() {
 
               <div>
                 <label className="block text-[11px] uppercase tracking-wider font-bold text-slate-400 mb-1">
-                  Enforce Password Expiry Lifecycle (Days)
+                  Password Expiry Lifecycle (Days)
                 </label>
                 <input
                   type="number"
@@ -369,13 +338,13 @@ export default function SystemPoliciesPage() {
                   className="w-full text-xs font-mono border border-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-slate-900 transition-colors"
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  Set to 0 to disable cyclic password invalidation.
+                  Set to 0 to disable automatic cyclic rotation demands.
                 </span>
               </div>
 
               <div>
                 <label className="block text-[11px] uppercase tracking-wider font-bold text-slate-400 mb-1">
-                  Prevent Reuse of Past Credentials
+                  History Check (Prevent Password Reuse)
                 </label>
                 <input
                   type="number"
@@ -388,7 +357,7 @@ export default function SystemPoliciesPage() {
                   className="w-full text-xs font-mono border border-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-slate-900 transition-colors"
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  Validates history logs against previous hash variations.
+                  Validates against a history list of previous cryptographic hashes.
                 </span>
               </div>
             </div>
@@ -396,7 +365,7 @@ export default function SystemPoliciesPage() {
             {/* Checkbox Matrix Requirements */}
             <div className="md:col-span-2 space-y-3 pl-0 md:pl-2 flex flex-col justify-center">
               <label className="block text-[11px] uppercase tracking-wider font-black text-slate-400 mb-2">
-                Character Diversity Mapping Restrictions
+                Required Character Categories
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -412,7 +381,7 @@ export default function SystemPoliciesPage() {
                       Require Uppercase Letters
                     </span>
                     <span className="text-[10px] text-slate-400 block">
-                      Must include characters matching [A-Z] tracking sets.
+                      Must contain uppercase alphabets [A-Z].
                     </span>
                   </div>
                 </label>
@@ -429,7 +398,7 @@ export default function SystemPoliciesPage() {
                       Require Lowercase Letters
                     </span>
                     <span className="text-[10px] text-slate-400 block">
-                      Must include characters matching [a-z] tracking sets.
+                      Must contain lowercase alphabets [a-z].
                     </span>
                   </div>
                 </label>
@@ -446,7 +415,7 @@ export default function SystemPoliciesPage() {
                       Require Numeric Digits
                     </span>
                     <span className="text-[10px] text-slate-400 block">
-                      Must include quantitative symbols matching [0-9] entries.
+                      Must include numbers matching [0-9].
                     </span>
                   </div>
                 </label>
@@ -463,7 +432,7 @@ export default function SystemPoliciesPage() {
                       Require Special Symbols
                     </span>
                     <span className="text-[10px] text-slate-400 block">
-                      Must leverage punctuation operators like (!, @, #, $, %).
+                      Must contain formatting symbols (e.g., !, @, #, $, %).
                     </span>
                   </div>
                 </label>
@@ -473,7 +442,7 @@ export default function SystemPoliciesPage() {
         </div>
 
         {/* ==========================================
-            ⚡ SECTION 4: PRE-AUTH COMPLIANCE CONTEXT
+            ⚡ SECTION 4: GLOBAL ACCESS GATES
             ========================================== */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4 lg:col-span-2">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
@@ -482,11 +451,10 @@ export default function SystemPoliciesPage() {
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                Pre-Flight Authentication Gateways
+                Estate Policy Management Gates
               </h3>
               <p className="text-[11px] text-slate-400">
-                Configure intercept hooks running ahead of the core server
-                passport allocation.
+                Configure conditional intercept criteria applied before granting admin workspace entry.
               </p>
             </div>
           </div>
@@ -494,13 +462,10 @@ export default function SystemPoliciesPage() {
           <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="space-y-1">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-wide block">
-                Enforce Action/Policy Acceptance Intercept Before Login
+                Force Policy Rule Acceptance Modal on Login
               </span>
               <p className="text-[11px] text-slate-400 max-w-2xl">
-                When deployed, administrators must actively acknowledge systemic
-                security declarations, terms of coverage, or hardware usage
-                updates inside an initialization modal overlay prior to
-                receiving authentication token payload handshakes.
+                When enabled, all staff and estate managers must explicitly review and accept updated operational declarations or security terms in an overlay popup window before accessing their dashboards.
               </p>
             </div>
 
@@ -528,20 +493,21 @@ export default function SystemPoliciesPage() {
       </div>
 
       {/* ─── FLOATING FOOTER STATUS BAR ─── */}
-      <div className="bg-slate-50 border border-slate-200 px-6 py-4 rounded-2xl flex items-center justify-between shadow-sm">
+      <div className="bg-slate-50 border border-slate-200 px-6 py-4 rounded-2xl flex items-center justify-between shadow-sm sticky bottom-4 backdrop-blur bg-opacity-95">
         <div className="flex items-center gap-2 text-slate-500 text-xs">
           <RefreshCw
             size={14}
             className={actionLoading ? "animate-spin text-slate-900" : ""}
           />
-          <span>Config array ready for compile matrix deployment.</span>
+          <span>Configuration policy rules map ready for compilation.</span>
         </div>
         <button
           type="submit"
           disabled={actionLoading}
-          className="px-6 py-2 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-xs font-bold uppercase tracking-wider shadow transition-all"
+          className="px-6 py-2.5 bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-400 rounded-xl text-xs font-bold uppercase tracking-wider shadow transition-all flex items-center gap-2"
         >
-          {actionLoading ? "Compiling Vector Rules..." : "Save Policy Arrays"}
+          <Save size={14} />
+          {actionLoading ? "Saving Policy Matrices..." : "Save Policy Schema"}
         </button>
       </div>
     </form>

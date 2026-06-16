@@ -12,6 +12,7 @@ import {
   Laptop,
   Trash2,
   Globe,
+  Loader2,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { fetchReadableAddress } from "../services/apis";
@@ -25,6 +26,8 @@ import {
 } from "../services/apis_sec";
 import { NetworkNode, RuleNode } from "../services/types";
 import SecurityActionWarningModal from "./SecurityActionWarningModal";
+import { useUser } from "../UserContext";
+import { showAccessDeniedToast } from "./ManageUsersPage";
 
 // 🎯 FIXED INTEGRATED RESOLVER COMPONENT (Rules of Hooks Compliant)
 const LocationCell = ({ rawLocation }: { rawLocation: string }) => {
@@ -56,6 +59,7 @@ const LocationCell = ({ rawLocation }: { rawLocation: string }) => {
 type SubTabVariant = "live" | "pending" | "rules";
 
 export default function NetworkPerimeterPage() {
+  const { user } = useUser();
   const [subTab, setSubTab] = useState<SubTabVariant>("live");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [globalLoading, setGlobalLoading] = useState(true);
@@ -68,7 +72,6 @@ export default function NetworkPerimeterPage() {
   const [manualIp, setManualIp] = useState("");
   const [ruleType, setRuleType] = useState<"ALLOW" | "DENY">("ALLOW");
   const [ruleLabel, setRuleLabel] = useState("");
-  const [activeTargetIp, setActiveTargetIp] = useState<string>("");
   const [isWarningOpen, setIsWarningOpen] = useState(false);
   const [warningConfig, setWarningConfig] = useState<{
     title: string;
@@ -115,6 +118,16 @@ export default function NetworkPerimeterPage() {
   }, [fetchNetworkPerimeterData]);
 
   const handleApproveIp = async (targetAdminId: string, targetIp: string) => {
+    const canChangeIpStatus =
+      user?.permissions.includes("security_infrastructure") ||
+      user?.permissions.includes("change_ip_status") ||
+      user?.permissions.includes("all_access");
+
+    if (!canChangeIpStatus) {
+      showAccessDeniedToast();
+      return;
+    }
+
     setActionLoading(true);
     try {
       const data = await approvePendingIp(targetAdminId, targetIp);
@@ -135,27 +148,39 @@ export default function NetworkPerimeterPage() {
     }
   };
 
-  const triggerBlackListWarning = (targetIp: string) => {
-    setActiveTargetIp(targetIp);
+  const triggerBlackListWarning = (targetAdminId: string, targetIp: string) => {
     setWarningConfig({
       title: "Blacklist IP",
       message: `Are you certain you want to terminate this administrative session and drop traffic from IP ${targetIp} permanently?`,
       confirmText: "Block IP",
       variant: "warning",
       onConfirm: async () => {
-        await handleRevokeAndBlacklist();
+        await handleRevokeAndBlacklist(targetAdminId, targetIp);
       },
     });
     setIsWarningOpen(true);
   };
 
-  const handleRevokeAndBlacklist = async () => {
+  const handleRevokeAndBlacklist = async (
+    targetAdminId: string,
+    targetIp: string,
+  ) => {
+    const canChangeIpStatus =
+      user?.permissions.includes("security_infrastructure") ||
+      user?.permissions.includes("change_ip_status") ||
+      user?.permissions.includes("all_access");
+
+    if (!canChangeIpStatus) {
+      showAccessDeniedToast();
+      return;
+    }
+
     setActionLoading(true);
     try {
-      const data = await blacklistTargetIp(activeTargetIp);
+      const data = await blacklistTargetIp(targetIp, targetAdminId);
       if (data.success) {
         toast.error(
-          `Handshake severed cleanly. IP ${activeTargetIp} added to database blacklist.`,
+          `Handshake severed cleanly. IP ${targetIp} added to database blacklist.`,
           { icon: "🛑" },
         );
         await fetchNetworkPerimeterData();
@@ -168,7 +193,6 @@ export default function NetworkPerimeterPage() {
       toast.error("Internal processing exception blacklisting server node.");
     } finally {
       setActionLoading(false);
-      setActiveTargetIp("")
       setIsWarningOpen(false);
     }
   };
@@ -176,6 +200,16 @@ export default function NetworkPerimeterPage() {
   const handleAddManualRule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualIp.trim()) return;
+
+    const canAddManualRule =
+      user?.permissions.includes("security_infrastructure") ||
+      user?.permissions.includes("add_firewall_rule") ||
+      user?.permissions.includes("all_access");
+
+    if (!canAddManualRule) {
+      showAccessDeniedToast();
+      return;
+    }
 
     setActionLoading(true);
     try {
@@ -202,14 +236,31 @@ export default function NetworkPerimeterPage() {
     }
   };
 
-  const handleDeleteRule = async (ruleId: string, networkVector: string) => {
-    if (
-      !confirm(
-        `Remove protective restriction rule layout configuration for ${networkVector}?`,
-      )
-    )
-      return;
+  const triggerDeleteFirewallWarning = (ruleId: string, networkVector: string) => {
+    setWarningConfig({
+      title: "Purge Network Firewall Rule",
+      message: `Remove active protective restriction rule layout configuration for ${networkVector}?`,
+      confirmText: "Purge Firewall Rule",
+      variant: "danger",
+      onConfirm: async () => {
+        await handleDeleteRule(ruleId, networkVector);
+      },
+    });
+    setIsWarningOpen(true);
+  };
 
+  const handleDeleteRule = async (ruleId: string, networkVector: string) => {
+    const canDeleteManualRule =
+      user?.permissions.includes("security_infrastructure") ||
+      user?.permissions.includes("delete_firewall_rule") ||
+      user?.permissions.includes("all_access");
+
+    if (!canDeleteManualRule) {
+      showAccessDeniedToast();
+      return;
+    }
+    
+    setActionLoading(true);
     try {
       const data = await deleteFirewallRule(ruleId);
       if (data.success) {
@@ -223,6 +274,9 @@ export default function NetworkPerimeterPage() {
       }
     } catch (err) {
       toast.error("Exception handling script dropping firewall rows.");
+    } finally {
+      setActionLoading(false);
+      setIsWarningOpen(false);
     }
   };
 
@@ -367,7 +421,9 @@ export default function NetworkPerimeterPage() {
                       </td>
                       <td className="p-4 text-right">
                         <button
-                          onClick={() => triggerBlackListWarning(conn.ip)}
+                          onClick={() =>
+                            triggerBlackListWarning(conn.id, conn.ip)
+                          }
                           className="px-2.5 py-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all uppercase tracking-wider"
                         >
                           Revoke & Ban
@@ -433,7 +489,9 @@ export default function NetworkPerimeterPage() {
                           Approve & Whitelist
                         </button>
                         <button
-                          onClick={() => triggerBlackListWarning(req.ip)}
+                          onClick={() =>
+                            triggerBlackListWarning(req.id, req.ip)
+                          }
                           className="px-2.5 py-1.5 text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all uppercase tracking-wider"
                         >
                           Revoke & Blacklist
@@ -494,7 +552,7 @@ export default function NetworkPerimeterPage() {
                       <td className="p-4 text-right">
                         <button
                           onClick={() =>
-                            handleDeleteRule(rule.id, rule.network)
+                            triggerDeleteFirewallWarning(rule.id, rule.network)
                           }
                           className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-all"
                         >
@@ -572,7 +630,7 @@ export default function NetworkPerimeterPage() {
                   className="w-full text-sm font-sans border border-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-slate-900 transition-colors"
                 />
               </div>
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="pt-2 flex justify-end gap-2 flex-1">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -582,9 +640,13 @@ export default function NetworkPerimeterPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-xs font-bold uppercase tracking-wider shadow"
+                  className="flex-1 flex justify-center px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-xs font-bold uppercase tracking-wider shadow"
                 >
-                  Save Vector Rule
+                  {actionLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Save Vector Rule"
+                  )}
                 </button>
               </div>
             </form>

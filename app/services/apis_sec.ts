@@ -41,6 +41,7 @@ export async function approvePendingIp(
   adminId: string,
   ipAddress: string,
 ): Promise<StandardActionResponse> {
+  console.log(`Attempting to approve IP ${ipAddress} for Admin ID: ${adminId}`);
   const res = await fetch("/api/master/security/approve-ip", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -57,11 +58,12 @@ export async function approvePendingIp(
  */
 export async function blacklistTargetIp(
   ipToBan: string,
+  adminId: string,
 ): Promise<StandardActionResponse> {
   const res = await fetch("/api/master/security/blacklist-ip", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ipToBan }),
+    body: JSON.stringify({ ipToBan, adminId }),
     credentials: "include",
   });
   if (!res.ok)

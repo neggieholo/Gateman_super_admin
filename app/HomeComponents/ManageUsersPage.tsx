@@ -29,6 +29,24 @@ import { useUser } from "../UserContext";
 import AdminPasswordOverrideModal from "./AdminPasswordOverrideModal";
 import SecurityActionWarningModal from "./SecurityActionWarningModal";
 
+export const showAccessDeniedToast = () => {
+  toast.error(
+    `Access Denied. You do not hold the authorized credentials required for this operation.`,
+    {
+      id: "unauthorized-users-page-lock",
+      duration: 4000,
+      position: "top-center",
+      style: {
+        fontWeight: "bold",
+        borderRadius: "12px",
+        background: "#1E293B",
+        color: "#FFFFFF",
+        maxWidth: "450px",
+      },
+    },
+  );
+};
+
 export default function ManageUsersPage() {
   const { user } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
@@ -83,24 +101,6 @@ export default function ManageUsersPage() {
   useEffect(() => {
     fetchAdmins();
   }, []);
-
-  const showAccessDeniedToast = () => {
-    toast.error(
-      `Access Denied. You do not hold the authorized credentials required for this operation.`,
-      {
-        id: "unauthorized-users-page-lock",
-        duration: 4000,
-        position: "top-center",
-        style: {
-          fontWeight: "bold",
-          borderRadius: "12px",
-          background: "#1E293B",
-          color: "#FFFFFF",
-          maxWidth: "450px",
-        },
-      },
-    );
-  };
 
   const handleOpenProfile = (user: SuperAdminUser) => {
     setSelectedProfileUser(user);
@@ -207,7 +207,7 @@ export default function ManageUsersPage() {
         loading: "Updating system status parameters...",
         success: (res) => {
           if (res.success) {
-            fetchAdmins(); 
+            fetchAdmins();
             return `Account access successfully updated.`;
           }
           throw new Error(res.message);
@@ -237,7 +237,7 @@ export default function ManageUsersPage() {
         loading: "Purging security database structures...",
         success: (res) => {
           if (res.success) {
-            fetchAdmins(); 
+            fetchAdmins();
             return "Administrator profile entirely stripped from core registries.";
           }
           throw new Error(res.message);

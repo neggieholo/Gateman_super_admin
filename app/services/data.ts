@@ -81,4 +81,24 @@ export const SYSTEM_PERMISSIONS: PermissionNode[] = [
     name: "View & Triage Security Incidents",
     parent_permission: "security_infrastructure",
   },
+  {
+    id: "change_ip_status",
+    name: "Blacklist & Whitelist Target IP Nodes",
+    parent_permission: "security_infrastructure",
+  },
+  {
+    id: "add_firewall_rule",
+    name: "Create Static Firewall Vector Rules",
+    parent_permission: "security_infrastructure",
+  },
+  {
+    id: "delete_firewall_rule",
+    name: "Purge & Delete Firewall Rules",
+    parent_permission: "security_infrastructure",
+  },
+  {
+    id: "edit_system_policies",
+    name: "Modify & Commit Global System Policies",
+    parent_permission: "security_infrastructure",
+  },
 ];
