@@ -62,7 +62,7 @@ export default function EstatesManagement() {
     }
     setSelectedEstate(estate);
   };
-  // Filter Logic matching brand names or unique regional structural codes
+
   const filteredEstates = estates.filter(
     (e) =>
       e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
