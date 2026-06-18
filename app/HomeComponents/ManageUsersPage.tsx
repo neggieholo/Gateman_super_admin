@@ -325,7 +325,7 @@ export default function ManageUsersPage() {
         >
           <ArrowLeft size={16} /> Back
         </button>
-        <UserLogsPage isolatedAdminId={logsId} isolatedAdminName={logsName} />
+        <UserLogsPage isolatedAdminId={logsId} isolatedAdminName={logsName} type="user"/>
       </div>
     );
   }

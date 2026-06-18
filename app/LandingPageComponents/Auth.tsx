@@ -308,7 +308,38 @@ export default function Auth() {
               </div>
             ),
             {
-              duration: Infinity, // Prevents it from auto-vanishing so Simon can read it fully
+              duration: Infinity, 
+              position: "top-center",
+            },
+          );
+          return;
+        }
+
+        if (data.status === "MFA_DEADLINE_MISSED") {
+          setLoading(false);
+
+          toast.error(
+            (t) => (
+              <div className="flex flex-col gap-1.5 p-1">
+                <p className="font-sans font-black text-slate-900 text-sm tracking-tight">
+                  Administrative Account Lock
+                </p>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                  An administrative block has been triggered due to failure to set MFA. Please contact the{" "}
+                  <strong>System Registrar</strong> to reslove the issue.
+                </p>
+                <div className="flex justify-end mt-1">
+                  <button
+                    onClick={() => toast.dismiss(t.id)}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[10px] font-oswald font-black uppercase tracking-wider transition-colors shadow-sm"
+                  >
+                    Acknowledge
+                  </button>
+                </div>
+              </div>
+            ),
+            {
+              duration: Infinity,
               position: "top-center",
             },
           );
@@ -348,6 +379,10 @@ export default function Auth() {
           setUser(data.user);
           if (data.onboarding?.showPasswordWarningPopup) {
             localStorage.setItem("DASHBOARD_PASS_WARN", "true");
+          }
+
+          if (data.onboarding?.showMfaSetupOnboarding) {
+            localStorage.setItem("DASHBOARD_MFA_WARN", "true");
           }
           router.push("/home/dashboard");
         } else {

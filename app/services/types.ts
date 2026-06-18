@@ -310,3 +310,40 @@ export interface UpdatePoliciesResponse {
   success: boolean;
   message: string;
 }
+
+// --- Interface Contracts matching your exact schema layout ---
+export interface DashboardEstateNode {
+  id: string;
+  name: string;
+  estate_code: string;
+  lga: string;
+  state: string;
+  status: "ACTIVE" | "SUSPENDED" | "PENDING";
+  joined_date: string;
+  total_residents: number;
+  active_residents_30_days: number;
+  total_guards: number;
+  guards_on_duty: number;
+}
+
+export interface EstatesDirectoryResponse {
+  success: boolean;
+  count: number;
+  estates: DashboardEstateNode[];
+}
+
+export interface EstateDetailedContext extends DashboardEstateNode {
+  gatepasses: any[];
+  posts: any[];
+  events: any[];
+  reports: any[];
+  locations: any[];
+  services: any[];
+  service_requests: any[];
+  admins: any[];
+}
+
+export interface EstateDetailsResponse {
+  success: boolean;
+  estate: EstateDetailedContext;
+}

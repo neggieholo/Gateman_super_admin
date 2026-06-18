@@ -11,54 +11,75 @@ export default function SuperAdminDashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    const checkPasswordWarningStatus = localStorage.getItem(
-      "DASHBOARD_PASS_WARN",
-    );
+    const hasPassWarn = localStorage.getItem("DASHBOARD_PASS_WARN") === "true";
+    const hasMfaWarn = localStorage.getItem("DASHBOARD_MFA_WARN") === "true"; 
 
-    if (checkPasswordWarningStatus === "true") {
-      // Drop your custom toast modal notification warning window banner
-      toast(
-        (t) => (
-          <div className="flex flex-col gap-2 p-1">
-            <p className="font-sans font-bold text-slate-900 text-sm">
-              Initial Login Setup Detected
-            </p>
-            <p className="text-xs text-slate-500 font-medium">
-              You are currently accessing the system using a temporary access
-              credential. For maximum system protection, please configure a new
-              secret password.
-            </p>
-            <div className="flex gap-2 justify-end mt-1">
-              <button
-                onClick={() => {
-                  toast.dismiss(t.id);
-                  localStorage.removeItem("DASHBOARD_PASS_WARN");
-                }}
-                className="px-3 py-1.5 text-[10px] font-oswald font-black text-slate-400 hover:text-slate-600 uppercase"
-              >
-                Later
-              </button>
-              <button
-                onClick={() => {
-                  toast.dismiss(t.id);
-                  localStorage.removeItem("DASHBOARD_PASS_WARN");
-                  window.location.href = "/home/change-password";
-                }}
-                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-oswald font-black uppercase shadow-sm"
-              >
-                Update Now
-              </button>
-            </div>
+    // Short circuit if neither warning is flagged
+    if (!hasPassWarn && !hasMfaWarn) return;
+
+    toast(
+      (t) => (
+        <div className="flex flex-col gap-2.5 p-1 max-w-sm">
+          <p className="font-sans font-black text-slate-900 text-sm tracking-tight">
+            ⚠️ Security Profile Configuration Required
+          </p>
+
+          <div className="flex flex-col gap-2 text-xs text-slate-600 font-medium leading-relaxed">
+            {hasPassWarn && (
+              <p>
+                • You are currently using a <strong>temporary password</strong>.
+                For maximum system protection, please configure a new master
+                credential.
+              </p>
+            )}
+            {hasMfaWarn && (
+              <p>
+                • Administrative security policies{" "}
+                <strong>require Multi-Factor Authentication</strong> for your
+                account. Please set up MFA before your next session to avoid
+                access restrictions.
+              </p>
+            )}
           </div>
-        ),
-        {
-          id: "initial-setup-password-warning",
-          duration: Infinity,
-          position: "top-center",
-        },
-      );
-    }
+
+          <div className="flex gap-2 justify-end mt-1.5 border-t border-slate-100 pt-2">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                localStorage.removeItem("DASHBOARD_PASS_WARN");
+                localStorage.removeItem("DASHBOARD_MFA_WARN");
+              }}
+              className="px-3 py-1.5 text-[10px] font-oswald font-black text-slate-400 hover:text-slate-600 uppercase tracking-wider transition-colors"
+            >
+              Acknowledge Later
+            </button>
+
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                localStorage.removeItem("DASHBOARD_PASS_WARN");
+                localStorage.removeItem("DASHBOARD_MFA_WARN"); // Fixed typo
+
+                // Smart routing path selection
+                window.location.href = hasMfaWarn
+                  ? "/home/settings"
+                  : "/home/change-password";
+              }}
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-oswald font-black uppercase tracking-wider shadow-sm transition-colors"
+            >
+              Configure Profile
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        id: "admin-onboarding-security-alert",
+        duration: Infinity,
+        position: "top-center",
+      },
+    );
   }, []);
+
   // Logic specifically for Super Admin
   const stats = {
     totalEstates: 124,

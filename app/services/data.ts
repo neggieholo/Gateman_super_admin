@@ -47,6 +47,56 @@ export const SYSTEM_PERMISSIONS: PermissionNode[] = [
     parent_permission: "users_management",
   },
   {
+    id: "estates_management",
+    name: "Estates Management (Root)",
+    parent_permission: null,
+  },
+  {
+    id: "view_estate_info",
+    name: "View Estate Info",
+    parent_permission: "estates_management",
+  },
+  {
+    id: "modify_estate_status",
+    name: "Modify Estate Status",
+    parent_permission: "estates_management",
+  },
+  {
+    id: "delete_estate",
+    name: "Delete Estate",
+    parent_permission: "estates_management",
+  },
+  {
+    id: "modify_estate_admin_status",
+    name: "Modify Estate Admin Status",
+    parent_permission: "estates_management",
+  },
+  {
+    id: "view_estate_residents",
+    name: "View Estate Residents",
+    parent_permission: "estates_management",
+  },
+  {
+    id: "view_estate_security",
+    name: "View Estate Security",
+    parent_permission: "estates_management",
+  },
+  {
+    id: "view_estate_resident_logs",
+    name: "View Estate Resident Logs",
+    parent_permission: "estates_management",
+  },
+  {
+    id: "view_estate_security_logs",
+    name: "View Estate Security Logs",
+    parent_permission: "estates_management",
+  },
+  {
+    id: "view_estate_logs",
+    name: "View Estate Logs",
+    parent_permission: "estates_management",
+  },
+  {
     id: "logs_management",
     name: "Logs & Security Audits (Root)",
     parent_permission: null,

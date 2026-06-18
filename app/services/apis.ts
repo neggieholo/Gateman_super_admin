@@ -314,7 +314,7 @@ export const fetchAllSuperAdminsApi =
     }
   };
 
-export const fetchUserLogsApi = async (filters?: {
+export const fetchUserLogsApi = async (type: string, filters?: {
   action_type?: string;
   target_resource?: string;
 }) => {
@@ -326,8 +326,9 @@ export const fetchUserLogsApi = async (filters?: {
     }
 
     const res = await fetch(url, {
-      method: "GET",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type }),
     });
     return await res.json();
   } catch (err) {

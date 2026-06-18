@@ -154,7 +154,7 @@ export default function SecurityPage() {
             {activeTab === "incidents" && <SecurityIncidentsPage />}
 
             {/* 🔄 Reusing your completed component layout straight out of the box! */}
-            {activeTab === "logs" && <UserLogsPage />}
+            {activeTab === "logs" && <UserLogsPage type="security"/>}
           </>
         ) : (
           <div className="p-8 text-center text-sm font-semibold text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
