@@ -17,7 +17,6 @@ export default function EstatesManagement() {
   const [loading, setLoading] = useState<boolean>(true);
   const [totalEstates, setTotalEstates] = useState<number>(0);
 
-  // 🔄 Automated Initial Hydration Lifecycle
   useEffect(() => {
     fetchEstates();
   }, []);
