@@ -28,23 +28,13 @@ export interface Estate {
   estate_code: string;
   created_at: string;
 
-  // --- Business Registration (CAC/TIN) ---
-  cac_number?: string;
-  tin_number?: string;
-  business_type?: string; // e.g., 'INCORPORATED_TRUSTEE'
-  registration_date?: string; // Date from CAC
-  registered_address?: string; // Address found on CAC record
-
-  // --- Document URLs ---
-  cac_cert_url?: string;
-  tin_cert_url?: string;
-  estate_utility_url?: string; // Proof of Estate/Gatehouse location
-  authorization_letter_url?: string; // The Board Resolution/Letter
-  authorizing_body_name?: string; // e.g., "Silver Valley Residents Association"
-
-  // --- Verification & Fintech ---
-  cac_verification_status: "pending" | "active" | "invalid" | "flagged";
-  paystack_subaccount_code?: string;
+  payment_type: string;
+  external_api_url: string;
+  
+  bank_account_number?: string;
+  bank_code?: string;
+  bank_account_name?: string;
+  bank_name?: string;
 }
 
 export interface VerificationRequest {
@@ -127,24 +117,71 @@ export interface BlockedUser {
   email: string;
 }
 
+export interface LocationPair {
+  block: string;
+  unit: string[];
+}
+
+// export interface Invitation {
+//   id: string;
+//   guest_name: string;
+//   guest_phone: string;
+//   guest_image_url: string | null;
+//   access_code: string;
+//   invite_type: "one_time" | "multi_entry" | "staff_entry";
+//   start_date: any;
+//   end_date: any;
+//   start_time: any;
+//   end_time: any;
+//   excluded_dates: string[];
+//   status: string;
+//   actual_checkin: any;
+//   actual_checkout: any;
+//   actual_checkin_date: any;
+//   actual_checkout_date: any;
+//   created_at: string;
+//   is_cancelled: boolean;
+//   resident_name?: string;
+//   locations: {
+//     [estateId: string]: LocationPair[];
+//   };
+//   estate_name?: string;
+//   estate_address?: string;
+//   lga?: string;
+//   town?: string;
+//   staff_position?: string;
+//   permitted_days: number[];
+//   is_activated?: boolean;
+// }
+
 export interface Invitation {
   id: string;
   guest_name: string;
-  guest_image_url: string | null;
+  guest_phone: string;
+  guest_image_url?: string;
   access_code: string;
-  invite_type: "one_time" | "multi_entry";
-  start_date: any;
-  end_date: any;
-  start_time: any;
-  end_time: any;
-  excluded_dates: string[];
-  status: string;
-  actual_checkin: any;
-  actual_checkout: any;
-  actual_checkin_date: any;
-  actual_checkout_date: any;
-  created_at: string;
+  status: "pending" | "checked_in" | "checked_out" | "overstayed";
+  invite_type: "one_time" | "multi_entry" | "staff_entry";
+  start_date: string;
+  end_date: string;
+  start_time: string;
+  end_time: string;
+  actual_checkin_date?: string;
+  actual_checkout_date?: string;
   is_cancelled: boolean;
+  excluded_dates?: string[];
+  // Joined Fields
+  resident_name?: string;
+  locations: {
+    [estateId: string]: LocationPair[];
+  };
+  estate_name?: string;
+  estate_address?: string;
+  lga?: string;
+  town?: string;
+  staff_position?: string;
+  permitted_days: number[];
+  is_activated?: boolean;
 }
 
 export interface BlockedSecurityUser {
@@ -340,10 +377,40 @@ export interface EstateDetailedContext extends DashboardEstateNode {
   locations: any[];
   services: any[];
   service_requests: any[];
-  admins: any[];
+  admin: any;
+  estate: any;
 }
 
 export interface EstateDetailsResponse {
   success: boolean;
   estate: EstateDetailedContext;
+}
+
+export interface EmergencyContact {
+  id: number; // or string, depending on Date.now() or UUID
+  name: string;
+  phone: string;
+}
+
+export interface AdminUser {
+  id: string;
+  estate_id: string;
+  estate_name?: string;
+  name: string;
+  email: string;
+  phone_number: string;
+  role: "admin";
+  avatar?: string | Blob;
+  subscription_expiry?: string;
+  created_at?: string;
+
+  admin_selfie_url?: string;
+
+  profile_image_url?: string;
+
+  admin_role?: string;
+  residential_address?: string;
+  consent_given: boolean;
+  consent_timestamp?: string;
+  status?: "ACTIVE" | "SUSPENDED";
 }
