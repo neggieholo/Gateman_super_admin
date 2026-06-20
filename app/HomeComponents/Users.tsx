@@ -142,11 +142,12 @@ export default function UsersPage() {
           <>
             {activeTab === "users" && <ManageUsersPage />}
             {activeTab === "add" && <AddSuperAdmin />}
-            {activeTab === "logs" && <UserLogsPage />}
+            {activeTab === "logs" && <UserLogsPage type="user"/>}
             {activeTab === "my_logs" && (
               <UserLogsPage
                 isolatedAdminId={user?.id}
                 isolatedAdminName={user?.full_name}
+                type="user"
               />
             )}
           </>

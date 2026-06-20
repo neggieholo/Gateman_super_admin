@@ -1,10 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
-import { AdminUser, EstateDetailedContext } from "../services/types";
+import {
+  AdminUser,
+  EstateDetailedContext,
+  Invitation,
+  Post,
+} from "../services/types";
 import { getEstateDetailsContext } from "../services/apis_estates";
 import { useGatePassMetrics } from "../hooks/useGatePassMetrics";
 import { getRelativeTime } from "../services/apis";
 import AdminUserDetailsPage from "./EstateAdminDetailsPage";
+import GatePassesOverviewPage from "./GatePassesOverviewPage";
+import CommunityPostsOverviewPage from "./CommunityPostsOverviewPage";
+import ReportsOverviewPage from "./ReportsOverviewPage";
+import ServicesOverviewPage from "./ServicesOverviewPage";
 
 interface EstateDashboardPageProps {
   estateId: string;
@@ -21,6 +30,12 @@ export default function EstateDashboardPage({
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"metrics" | "charts">("metrics");
   const [selectedAdmin, setSelectedAdmin] = useState<AdminUser | null>(null);
+  const [invitationsSelected, setInvitationsSelected] = useState<
+    Invitation[] | null
+  >(null);
+  const [postsSelected, setPostsSelected] = useState<Post[] | null>(null);
+  const [reportsSelected, setReportsSelected] = useState<Post[] | null>(null);
+  const [servicesSelected, setServicesSelected] = useState<Post[] | null>(null);
 
   useEffect(() => {
     async function fetchEstateDetails() {
@@ -245,7 +260,49 @@ export default function EstateDashboardPage({
         admin={selectedAdmin}
         estate={selectedEstate.estate}
         toggleAccess={handleAdminStatusUpdate}
-        onBack={() => setSelectedAdmin(null)} 
+        onBack={() => setSelectedAdmin(null)}
+      />
+    );
+  }
+
+  if (invitationsSelected) {
+    return (
+      <GatePassesOverviewPage
+        passes={selectedEstate.gatepasses}
+        estatename={selectedEstate.name}
+        onBack={() => setInvitationsSelected(null)}
+      />
+    );
+  }
+
+  if (postsSelected) {
+    return (
+      <CommunityPostsOverviewPage
+        posts={selectedEstate.posts}
+        estatename={selectedEstate.name}
+        onBack={() => setPostsSelected(null)}
+      />
+    );
+  }
+
+  if (reportsSelected) {
+    return (
+      <ReportsOverviewPage
+        reports={selectedEstate.reports}
+        estatename={selectedEstate.name}
+        estateId={selectedEstate.id}
+        onBack={() => setReportsSelected(null)}
+      />
+    );
+  }
+
+  if (servicesSelected) {
+    return (
+      <ServicesOverviewPage
+        services={selectedEstate.services}
+        estatename={selectedEstate.name}
+        estateId={selectedEstate.id}
+        onBack={() => setServicesSelected(null)}
       />
     );
   }
@@ -925,7 +982,11 @@ export default function EstateDashboardPage({
                   </div>
                 </div>
                 <button
-                  onClick={() => console.log("Deep dive gatepasses")}
+                  onClick={() => {
+                    if (selectedEstate.gatepasses) {
+                      setInvitationsSelected(selectedEstate.gatepasses);
+                    }
+                  }}
                   className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors"
                 >
                   See Details →
@@ -976,7 +1037,11 @@ export default function EstateDashboardPage({
                   </div>
                 </div>
                 <button
-                  onClick={() => console.log("Deep dive feed")}
+                  onClick={() => {
+                    if (selectedEstate.posts) {
+                      setPostsSelected(selectedEstate.posts);
+                    }
+                  }}
                   className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors"
                 >
                   Manage Notice Board →
@@ -1079,7 +1144,11 @@ export default function EstateDashboardPage({
                   </div>
                 </div>
                 <button
-                  onClick={() => console.log("Deep dive reports")}
+                  onClick={() => {
+                    if (selectedEstate.reports) {
+                      setReportsSelected(selectedEstate.reports);
+                    }
+                  }}
                   className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors"
                 >
                   Triage Control Desk →
@@ -1122,7 +1191,11 @@ export default function EstateDashboardPage({
                   </div>
                 </div>
                 <button
-                  onClick={() => console.log("Deep dive services")}
+                  onClick={() => {
+                    if (selectedEstate.services) {
+                      setServicesSelected(selectedEstate.reports);
+                    }
+                  }}
                   className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors"
                 >
                   Configure Vendors List →
@@ -1178,7 +1251,11 @@ export default function EstateDashboardPage({
                   </div>
                 </div>
                 <button
-                  onClick={() => console.log("Deep dive requests")}
+                  // onClick={() => {
+                  //   if (selectedEstate.services) {
+                  //     setServicesSelected(selectedEstate.reports);
+                  //   }
+                  // }}
                   className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors"
                 >
                   See Dispatch Ledger →

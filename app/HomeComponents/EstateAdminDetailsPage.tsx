@@ -1,6 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState } from "react";
 import { AdminUser, Estate } from "../services/types";
+import { getRelativeTime } from "../services/apis";
+import { X } from "lucide-react";
 
 interface AdminUserDetailsPageProps {
   admin: AdminUser;
@@ -20,6 +22,7 @@ export default function AdminUserDetailsPage({
     admin.status || "ACTIVE",
   );
   const [isMutating, setIsMutating] = useState(false);
+  const [showImagePreview, setShowImagePreview] = useState(false);
 
   const handleToggleAccess = (
     id: string,
@@ -35,20 +38,27 @@ export default function AdminUserDetailsPage({
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen animate-fadeIn">
       <div className="mx-auto space-y-6">
         {/* Navigation Action Header */}
-        <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-          <button
-            onClick={onBack}
-            className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors inline-flex items-center gap-1.5"
-          >
-            ← Back to Management Desk
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-400 font-bold tracking-wider uppercase">
-              System Scope:
-            </span>
-            <span className="text-xs font-mono font-bold bg-slate-100 px-2.5 py-1 rounded-lg text-slate-700">
-              {estate.name || admin.estate_name || "Estate Admin Token"}
-            </span>
+        <div className="flex flex-col items-start justify-between bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl transition-all"
+            >
+              ← Back to Control Desk
+            </button>
+          )}
+          <div className="space-y-0.5">
+            <h1 className="text-lg font-black text-slate-900 tracking-tight">
+              Admin Profile
+            </h1>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-400 font-bold tracking-wider uppercase">
+                System Scope:
+              </span>
+              <span className="text-xs font-mono font-bold bg-slate-100 px-2.5 py-1 rounded-lg text-slate-700">
+                {estate.name || admin.estate_name || "Estate Admin Token"}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -57,13 +67,13 @@ export default function AdminUserDetailsPage({
           <div className="h-24 bg-linear-to-r from-slate-800 to-indigo-950" />
           <div className="p-6 relative -mt-10 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 border-b border-slate-100">
             <div className="flex items-end gap-4">
-              <div className="w-20 h-20 bg-slate-200 rounded-2xl border-4 border-white shadow-md overflow-hidden shrink-0 flex items-center justify-center">
-                {admin.profile_image_url || admin.admin_selfie_url ? (
+              <div
+                onClick={() => setShowImagePreview(true)}
+                className="w-36 h-36 bg-slate-200 rounded-2xl border-4 border-white shadow-md overflow-hidden shrink-0 flex items-center justify-center"
+              >
+                {admin.avatar ? (
                   <img
-                    src={
-                      (admin.profile_image_url ||
-                        admin.admin_selfie_url) as string
-                    }
+                    src={admin.avatar as string}
                     alt={admin.name}
                     className="w-full h-full object-cover"
                   />
@@ -93,32 +103,42 @@ export default function AdminUserDetailsPage({
                   {admin.admin_role && `• ${admin.admin_role}`}
                 </p>
                 <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                  {admin.id}
+                  Last Period Active: {getRelativeTime(admin.last_activity_at)}
                 </p>
               </div>
             </div>
 
-            {/* Access Interceptor Toggle Mechanism Button */}
-            <button
-              onClick={() => {
-                const nextStatus =
-                  currentStatus === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
-                handleToggleAccess(admin.id, nextStatus);
-                setCurrentStatus(nextStatus);
-              }}
-              disabled={isMutating}
-              className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
-                currentStatus === "ACTIVE"
-                  ? "bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100"
-                  : "bg-indigo-600 hover:bg-indigo-700 text-white"
-              } ${isMutating ? "opacity-60 cursor-not-allowed" : ""}`}
-            >
-              {isMutating
-                ? "Updating Context Pool..."
-                : currentStatus === "ACTIVE"
-                  ? "🛑 Suspend Access"
-                  : "🔑 Restore Access"}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  console.log("Viewing logs");
+                }}
+                // disabled={isMutating}
+                className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200`}
+              >
+                View Logs History
+              </button>
+              <button
+                onClick={() => {
+                  const nextStatus =
+                    currentStatus === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
+                  handleToggleAccess(admin.id, nextStatus);
+                  setCurrentStatus(nextStatus);
+                }}
+                disabled={isMutating}
+                className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                  currentStatus === "ACTIVE"
+                    ? "bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100"
+                    : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                } ${isMutating ? "opacity-60 cursor-not-allowed" : ""}`}
+              >
+                {isMutating
+                  ? "Updating Context Pool..."
+                  : currentStatus === "ACTIVE"
+                    ? "🛑 Suspend Access"
+                    : "🔑 Restore Access"}
+              </button>
+            </div>
           </div>
 
           {/* Primary Profile Details Fields */}
@@ -145,15 +165,6 @@ export default function AdminUserDetailsPage({
                   {admin.phone_number || "N/A"}
                 </p>
               </div>
-
-              <div className="bg-white p-3 rounded-xl border border-slate-100 space-y-1">
-                <p className="text-[10px] text-slate-400 font-bold uppercase">
-                  Residential Node Address
-                </p>
-                <p className="text-xs font-medium text-slate-700">
-                  {admin.residential_address || "No structural address logged."}
-                </p>
-              </div>
             </div>
 
             <div className="space-y-4">
@@ -163,7 +174,7 @@ export default function AdminUserDetailsPage({
 
               <div className="bg-white p-3 rounded-xl border border-slate-100 space-y-1">
                 <p className="text-[10px] text-slate-400 font-bold uppercase">
-                  Provisioning Datetime Sequence
+                  REgistration Date
                 </p>
                 <p className="text-xs font-mono font-bold text-slate-700">
                   {admin.created_at
@@ -182,15 +193,6 @@ export default function AdminUserDetailsPage({
                         "en-GB",
                       )
                     : "Perpetual Cycle"}
-                </p>
-              </div>
-
-              <div className="bg-white p-3 rounded-xl border border-slate-100 space-y-1">
-                <p className="text-[10px] text-slate-400 font-bold uppercase">
-                  Estate ID Context
-                </p>
-                <p className="text-xs font-mono text-slate-600 truncate">
-                  {admin.estate_id}
                 </p>
               </div>
             </div>
@@ -276,22 +278,31 @@ export default function AdminUserDetailsPage({
                 </div>
               </div>
             </div>
-
-            {admin.admin_selfie_url && (
-              <div className="pt-2">
-                <a
-                  href={admin.admin_selfie_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full text-center py-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100/40 text-indigo-700 rounded-xl text-xs font-bold transition-colors block"
-                >
-                  📸 Inspect Biometric Verification Selfie
-                </a>
-              </div>
-            )}
           </div>
         </div>
       </div>
+      {showImagePreview && admin.avatar && (
+        <div
+          onClick={() => setShowImagePreview(false)}
+          className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/80 backdrop-blur-md cursor-zoom-out animate-in fade-in duration-150"
+        >
+          <div className="relative max-w-[90vw] max-h-[85vh] animate-in zoom-in-95 duration-150">
+            {/* Close button indicator helper for touch screens */}
+            <button
+              onClick={() => setShowImagePreview(false)}
+              className="absolute -top-12 right-0 p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all border border-white/10"
+            >
+              <X size={18} />
+            </button>
+            <img
+              src={admin.avatar}
+              alt={`${admin.name} expanded avatar`}
+              className="max-w-full max-h-[80vh] rounded-3xl object-contain border border-slate-800 shadow-2xl select-none"
+              onClick={(e) => e.stopPropagation()} // Stop overlay click collapse when clicking image directly
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

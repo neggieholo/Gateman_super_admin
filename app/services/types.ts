@@ -30,7 +30,7 @@ export interface Estate {
 
   payment_type: string;
   external_api_url: string;
-  
+
   bank_account_number?: string;
   bank_code?: string;
   bank_account_name?: string;
@@ -402,6 +402,7 @@ export interface AdminUser {
   role: "admin";
   avatar?: string | Blob;
   subscription_expiry?: string;
+  last_activity_at: string;
   created_at?: string;
 
   admin_selfie_url?: string;
@@ -413,4 +414,174 @@ export interface AdminUser {
   consent_given: boolean;
   consent_timestamp?: string;
   status?: "ACTIVE" | "SUSPENDED";
+}
+
+export interface Post {
+  id: string;
+  estate_id: string;
+  author_id: string;
+  author_name: string;
+  author_role: string;
+  title: string;
+  content: string;
+  category: string;
+  image_url?: string;
+  thumbnail_url?: string;
+  likes_count: number;
+  comments_count: number;
+  has_liked: boolean;
+  created_at: string;
+  admin_seen: boolean;
+  is_archived: boolean;
+}
+
+export interface Comment {
+  id: number;
+  post_id: number;
+  user_id: string;
+  user_type: string;
+  author_name: string;
+  content: string;
+  created_at: string;
+}
+
+export interface Like {
+  user_id: string;
+  author_name: string;
+  created_at: string;
+}
+
+export type ReportType = "GENERAL" | "SECURITY" | "PAYMENT" | "SERVICES";
+export type ReportCategory = "COMPLAINT" | "INFORMATION" | "EMERGENCY";
+export type ReportStatus = "PENDING" | "REVIEWED" | "RESOLVED";
+
+export interface EstateReport {
+  id: string;
+  estate_id: string;
+  reporter_id: string;
+  reporter_name?: string; // From the JOIN
+  type: ReportType;
+  category: ReportCategory;
+  target_security_ids: string[];
+  subject: string;
+  description: string;
+  status: ReportStatus;
+  linked_payment_id?: string;
+  admin_response?: string;
+  responded_at?: string;
+  created_at: string;
+}
+
+export interface Vendor {
+  id: string;
+  estate_id: string;
+  service_id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  created_at: string;
+}
+
+export interface EstateService {
+  id: string;
+  estate_id: string;
+  service_name: string;
+  vendors: Vendor[];
+  is_available: boolean;
+  created_at: string;
+}
+
+// 3. Interface for Resident Work Order Bookings
+export interface ServiceRequest {
+  id: string;
+  estate_id: string;
+  service_id: string | null;
+  service_name?: string; 
+  vendor_name?: string; 
+  resident_id: string;
+  resident_name: string;
+  resident_unit: string; // e.g., "Block G, Unit 4"
+  time_preferred: string; // e.g., "Morning (9AM - 12PM)"
+  description: string;
+  is_dispatched: boolean;
+  is_completed: boolean;
+  requested_at: string;
+}
+export interface EventRegistration {
+  id: string;
+  event_id: string;
+  guest_name: string;
+  guest_email: string | null;
+  guest_code: string; // The "GUEST-XXXX" code for the gate guard
+  status: "registered" | "checked_in";
+  checked_in_at: string | null;
+  created_at: string;
+}
+
+export interface EstateEvent {
+  id: string;
+  estate_id: string;
+  organizer_id: string | null;
+  title: string;
+  description: string | null;
+
+  // Date and Time (Postgres formats)
+  start_date: string; // ISO Date string (YYYY-MM-DD)
+  end_date: string;
+  start_time: string; // HH:mm:ss
+  end_time: string;
+
+  venue_detail: string | null;
+  registered_number: number;
+  expected_guests: number;
+  banner_url: string | null;
+  booked_dates: string[];
+
+  // Financial & Security
+  is_paid: boolean;
+  ticket_price: string; // Decimal comes as string from Postgres
+  subaccount_id: string | null;
+  ref_code: string;
+  is_approved: boolean;
+  is_rejected: boolean;
+
+  created_at: string;
+}
+
+export interface EstateLocation {
+  id: number;
+  estate_id: string;
+  name: string;
+  location_in_estate: string | null;
+  permitted_days: number[];
+  event_booked_on: Record<
+    string,
+    {
+      event_banner_url: string;
+      dates: string[];
+    }
+  >;
+  capacity?: number;
+  created_at: string;
+}
+
+export interface SecurityUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
+  estate_id: string;
+  push_token?: string;
+  is_on_duty: boolean;
+  last_checkin?: string;
+  last_checkout?: string;
+  checkin_location?: string;
+  checkout_location?: string;
+  last_known_location?: string;
+  last_location_time?: string;
+  role: "SECURITY";
+  id_type?: string;
+  id_front_url?: string;
+  id_back_url?: string;
 }
