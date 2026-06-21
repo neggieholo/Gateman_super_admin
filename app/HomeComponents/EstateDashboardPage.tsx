@@ -1,10 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect } from "react";
-import {
-  AdminUser,
-  EstateDetailedContext,
-} from "../services/types";
-import { getEstateDetailsContext } from "../services/apis_estates";
+import React, { useState, useEffect, useRef } from "react";
+import { AdminUser, EstateDetailedContext } from "../services/types";
+import { deleteEstateAccount, getEstateDetailsContext, updateEstateStatus } from "../services/apis_estates";
 import { useGatePassMetrics } from "../hooks/useGatePassMetrics";
 import { getRelativeTime } from "../services/apis";
 import AdminUserDetailsPage from "./EstateAdminDetailsPage";
@@ -15,6 +12,10 @@ import ServicesOverviewPage from "./ServicesOverviewPage";
 import ServiceRequestsOverviewPage from "./ServiceRequestsOverviewPage";
 import EstateLocationsOverviewPage from "./EstateLocationsOverviewPage";
 import EstateEventsOverviewPage from "./EstateEventsOverviewPage";
+import SecurityActionWarningModal from "./SecurityActionWarningModal";
+import { useUser } from "../UserContext";
+import { showAccessDeniedToast } from "./ManageUsersPage";
+import toast from "react-hot-toast";
 
 interface EstateDashboardPageProps {
   estateId: string;
@@ -25,12 +26,15 @@ export default function EstateDashboardPage({
   estateId,
   onBack,
 }: EstateDashboardPageProps) {
+  const {user} = useUser();
   const [selectedEstate, setSelectedEstate] =
     useState<EstateDetailedContext | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"metrics" | "charts">("metrics");
   const [selectedAdmin, setSelectedAdmin] = useState<AdminUser | null>(null);
+  const [isSuspending, setIsSuspending] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [invitationsSelected, setInvitationsSelected] =
     useState<boolean>(false);
   const [postsSelected, setPostsSelected] = useState<boolean>(false);
@@ -39,6 +43,94 @@ export default function EstateDashboardPage({
   const [requestsSelected, setRequestsSelected] = useState<boolean>(false);
   const [venuesSelected, setVenuesSelected] = useState<boolean>(false);
   const [eventsSelected, setEventsSelected] = useState<boolean>(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const savedScrollPositions = useRef<{ [key: string]: number }>({
+    metrics: 0,
+    charts: 0,
+  });
+  const [isWarningOpen, setIsWarningOpen] = useState(false);
+  const [warningConfig, setWarningConfig] = useState<{
+    title: string;
+    message: string;
+    confirmText: string;
+    variant: "warning" | "danger";
+    onConfirm: () => Promise<void> | void;
+  }>({
+    title: "",
+    message: "",
+    confirmText: "",
+    variant: "warning",
+    onConfirm: () => {},
+  });
+
+  const handleToggleEstateStatus = async (
+    estateId: string,
+    targetStatus: "ACTIVE" | "SUSPENDED",
+  ) => {
+    const canToggleStatus =
+      user?.permissions.includes("estates_management") ||
+      user?.permissions.includes("modify_estate_status") ||
+      user?.permissions.includes("all-access");
+
+    if (!canToggleStatus) {
+      showAccessDeniedToast();
+      return;
+    }
+    try {
+      setIsSuspending(true);
+
+      const res = await updateEstateStatus(estateId, targetStatus);
+
+      if (res.success) {
+        handleEstateStatusUpdate(targetStatus);
+      } else {
+        toast.error(
+          res.message ||
+            "Failed to commit status update target configuration model.",
+        );
+      }
+    } catch (err) {
+      console.error("Component UI suspension pipeline exception thrown:", err);
+      toast.error(
+        "An unexpected infrastructure context tracking validation mismatch occurred.",
+      );
+    } finally {
+      setIsSuspending(false);
+    }
+  };
+
+  const triggerEstateStatusWarning = (
+    estateId: string,
+    estate_name: string,
+    targetStatus: "ACTIVE" | "SUSPENDED",
+  ) => {
+    setWarningConfig({
+      title: "Purge Admin Account Vector",
+      message: `CRITICAL SUSPEND CHALLENGE: Are you completely certain you want to suspend "${estate_name}'s" account?`,
+      confirmText: "Suspend Account",
+      variant: "warning",
+      onConfirm: async () => {
+        await handleToggleEstateStatus(estateId, targetStatus);
+      },
+    });
+    setIsWarningOpen(true);
+  };
+  
+  const triggerEstateDeleteWarning = (
+    estateId: string,
+    estate_name: string,
+  ) => {
+    setWarningConfig({
+      title: "Delete Estate Account",
+      message: `CRITICAL DATA DELETION FORCE CHALLENGE: Are you completely certain you want to permanently purge "${estate_name}" from the GateMan core database? This action is absolute and cannot be undone.`,
+      confirmText: "Delete Account",
+      variant: "danger",
+      onConfirm: async () => {
+        await handleDeleteEstateAccount(estateId);
+      },
+    });
+    setIsWarningOpen(true);
+  };
 
   useEffect(() => {
     async function fetchEstateDetails() {
@@ -68,6 +160,24 @@ export default function EstateDashboardPage({
     }
   }, [estateId]);
 
+  const handleViewModeChange = (nextMode: "metrics" | "charts") => {
+    if (scrollContainerRef.current) {
+      // 1. Save the current view's scroll position
+      savedScrollPositions.current[viewMode] =
+        scrollContainerRef.current.scrollTop;
+    }
+    // 2. Flip the view mode state
+    setViewMode(nextMode);
+  };
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      // Pull the saved position for the incoming view (defaults to 0 if new)
+      scrollContainerRef.current.scrollTop =
+        savedScrollPositions.current[viewMode] || 0;
+    }
+  }, [viewMode]);
+
   // Optional: If you want status toggles on the detail page to update the parent list instantly
   const handleAdminStatusUpdate = (
     adminId: string,
@@ -85,6 +195,19 @@ export default function EstateDashboardPage({
         admin: prevEstate.admin
           ? { ...prevEstate.admin, status: nextStatus }
           : prevEstate.admin,
+      };
+    });
+  };
+
+  const handleEstateStatusUpdate = (
+    nextStatus: "ACTIVE" | "SUSPENDED",
+  ) => {
+    setSelectedEstate((prevEstate) => {
+      if (!prevEstate) return null;
+
+      return {
+        ...prevEstate,
+        status: nextStatus,
       };
     });
   };
@@ -218,14 +341,34 @@ export default function EstateDashboardPage({
     return `${Math.min(100, Math.round((value / total) * 100))}%`;
   };
 
-  const toggleSuspension = (id: string, currentStatus: string) => {
-    console.log(
-      `Toggling suspension for ${id}. Current status: ${currentStatus}`,
-    );
-  };
+  const handleDeleteEstateAccount = async (id: string) => {
+    const canDeleteEstate =
+      user?.permissions.includes("estates_management") ||
+      user?.permissions.includes("delete_estate") ||
+      user?.permissions.includes("all-access");
 
-  const handleLockdown = (id: string, name: string) => {
-    console.log(`🚨 EMERGENCY LOCKDOWN TRIGGERED FOR: ${name} (${id})`);
+    if (!canDeleteEstate) {
+      showAccessDeniedToast();
+      return;
+    }
+    try {
+      setIsDeleting(true);
+
+      const res = await deleteEstateAccount(id);
+
+      if (res.success) {
+        // handleEstateStatusUpdate(targetStatus);
+      } else {
+        toast.error(res.message || "Failed to purge estate account.");
+      }
+    } catch (err) {
+      console.error("Component UI suspension pipeline exception thrown:", err);
+      toast.error(
+        "An unexpected infrastructure context tracking validation mismatch occurred.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (loading) {
@@ -345,7 +488,10 @@ export default function EstateDashboardPage({
 
   return (
     <div className="p-1 sm:p-6 bg-slate-50 overflow-hidden flex flex-col justify-between flex-1 min-h-0">
-      <div className="space-y-6 overflow-y-auto flex-1 pr-1 w-full pb-4">
+      <div
+        ref={scrollContainerRef}
+        className="space-y-6 overflow-y-auto flex-1 pr-1 w-full pb-4"
+      >
         {/* Dashboard Header Bar */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -373,13 +519,13 @@ export default function EstateDashboardPage({
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
             <div className="bg-slate-100 p-1 rounded-xl flex items-center mr-2">
               <button
-                onClick={() => setViewMode("metrics")}
+                onClick={() => handleViewModeChange("metrics")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === "metrics" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
               >
                 Metrics
               </button>
               <button
-                onClick={() => setViewMode("charts")}
+                onClick={() => handleViewModeChange("charts")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === "charts" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
               >
                 📊 Charts View
@@ -387,7 +533,11 @@ export default function EstateDashboardPage({
             </div>
             <button
               onClick={() =>
-                toggleSuspension(selectedEstate.id, selectedEstate.status)
+                triggerEstateStatusWarning(
+                  selectedEstate.id,
+                  selectedEstate.name,
+                  selectedEstate.status,
+                )
               }
               className={`px-3 py-2 rounded-xl text-xs font-bold transition-colors ${selectedEstate.status === "ACTIVE" ? "bg-slate-100 text-red-600 hover:bg-slate-200" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}
             >
@@ -397,7 +547,7 @@ export default function EstateDashboardPage({
             </button>
             <button
               onClick={() =>
-                handleLockdown(selectedEstate.id, selectedEstate.name)
+                triggerEstateDeleteWarning(selectedEstate.id,selectedEstate.name)
               }
               className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
             >
@@ -1468,6 +1618,15 @@ export default function EstateDashboardPage({
           🛡️ View Security Info
         </button>
       </div>
+      <SecurityActionWarningModal
+        isOpen={isWarningOpen}
+        onClose={() => setIsWarningOpen(false)}
+        title={warningConfig.title}
+        message={warningConfig.message}
+        confirmText={warningConfig.confirmText}
+        variant={warningConfig.variant}
+        onConfirm={warningConfig.onConfirm}
+      />
     </div>
   );
 }

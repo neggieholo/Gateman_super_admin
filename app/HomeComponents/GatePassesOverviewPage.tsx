@@ -5,7 +5,7 @@ import { Invitation } from "../services/types";
 
 interface GatePassesOverviewPageProps {
   passes: Invitation[];
-  estatename:string;
+  estatename: string;
   onBack?: () => void;
 }
 
@@ -16,6 +16,7 @@ export default function GatePassesOverviewPage({
 }: GatePassesOverviewPageProps) {
   const [passesList, setPassesList] = useState<Invitation[]>(initialPasses);
   const [selectedPass, setSelectedPass] = useState<Invitation | null>(null);
+  const [showImagePreview, setShowImagePreview] = useState(false);
 
   // 🚨 Dynamic status evaluator mapping algorithm matching your established engine setup
   const getStatusStyle = (pass: Invitation) => {
@@ -255,7 +256,7 @@ export default function GatePassesOverviewPage({
                   <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
                     Pass Inspection Node
                   </h2>
-                  <p className="text-[10px] text-slate-400 font-mono truncate max-w-[280px]">
+                  <p className="text-[10px] text-slate-400 font-mono truncate max-w-70">
                     {selectedPass.id}
                   </p>
                 </div>
@@ -269,7 +270,14 @@ export default function GatePassesOverviewPage({
 
               {/* Guest Profile Deep Detail Layout */}
               <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <div className="w-36 h-36 bg-slate-200 rounded-xl border border-slate-300 shrink-0 overflow-hidden flex items-center justify-center">
+                <div
+                  onClick={() => {
+                    if (selectedPass.guest_image_url) {
+                      setShowImagePreview(true);
+                    }
+                  }}
+                  className="w-36 h-36 bg-slate-200 rounded-xl border border-slate-300 shrink-0 overflow-hidden flex items-center justify-center"
+                >
                   {selectedPass.guest_image_url ? (
                     <img
                       src={selectedPass.guest_image_url}
@@ -282,7 +290,7 @@ export default function GatePassesOverviewPage({
                     </span>
                   )}
                 </div>
-                <div className="space-y-0.5 max-w-[200px]">
+                <div className="space-y-0.5 max-w-50">
                   <p className="text-sm font-black text-slate-900 truncate">
                     {selectedPass.guest_name}
                   </p>
@@ -394,6 +402,28 @@ export default function GatePassesOverviewPage({
                 Dismiss View
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {showImagePreview && selectedPass?.guest_image_url && (
+        <div
+          onClick={() => setShowImagePreview(false)}
+          className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/80 backdrop-blur-md cursor-zoom-out animate-in fade-in duration-150"
+        >
+          <div className="relative max-w-[90vw] max-h-[85vh] animate-in zoom-in-95 duration-150">
+            {/* Close button indicator helper for touch screens */}
+            <button
+              onClick={() => setShowImagePreview(false)}
+              className="absolute -top-12 right-0 p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all border border-white/10"
+            >
+              <X size={18} />
+            </button>
+            <img
+              src={selectedPass.guest_image_url}
+              alt={`${selectedPass.guest_name} expanded avatar`}
+              className="max-w-full max-h-[80vh] rounded-3xl object-contain border border-slate-800 shadow-2xl select-none"
+              onClick={(e) => e.stopPropagation()} // Stop overlay click collapse when clicking image directly
+            />
           </div>
         </div>
       )}

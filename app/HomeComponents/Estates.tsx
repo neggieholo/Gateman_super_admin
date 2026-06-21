@@ -22,12 +22,12 @@ export default function EstatesManagement() {
   }, []);
 
   const fetchEstates = useCallback(async () => {
-    const canViewLogs =
+    const canViewDEstates =
       user?.permissions.includes("estates_management") ||
       user?.permissions.includes("view_estate_info") ||
       user?.permissions.includes("all-access");
 
-    if (!canViewLogs) {
+    if (!canViewDEstates) {
       showAccessDeniedToast();
       return;
     }
@@ -70,41 +70,19 @@ export default function EstatesManagement() {
       e.estate_code?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  // Emergency Control Action
-  const handleLockdown = (estateId: string, estateName: string) => {
-    toast(
-      (t) => (
-        <div className="flex flex-col gap-2 p-1">
-          <p className="font-sans font-black text-red-600 text-sm">
-            ⚠️ CRITICAL: SYSTEM LOCKDOWN TRIGGER
-          </p>
-          <p className="text-xs text-slate-500 font-medium">
-            Are you sure you want to trigger an immediate emergency lockdown for{" "}
-            <strong>{estateName}</strong>? This revokes all active visitor
-            passes and locks down all access points.
-          </p>
-          <div className="flex gap-2 justify-end mt-1">
-            <button
-              onClick={() => toast.dismiss(t.id)}
-              className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold font-sans"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                toast.dismiss(t.id);
-                toast.error(`Emergency Lockdown executed for ${estateName}!`);
-              }}
-              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold font-sans"
-            >
-              Confirm Lock
-            </button>
-          </div>
-        </div>
-      ),
-      { duration: Infinity, position: "top-center" },
+  const currentPermissions = user?.permissions || [];
+  const hasAccessToCurrentPanel =
+    currentPermissions.includes("all-access") ||
+    currentPermissions.includes("view_estate_info") ||
+    currentPermissions.includes("estates_management");
+
+  if(!hasAccessToCurrentPanel){
+    return (
+      <div className="p-8 text-center text-sm font-semibold text-slate-400 bg-slate-50 rounded-2xl border border-dashed">
+        🔒 View locked down due to restricted access.
+      </div>
     );
-  };
+  }
 
   return (
     <div className="p-2 bg-slate-50 h-[calc(100vh-110px)] text-slate-800 font-sans flex flex-col overflow-hidden">
@@ -178,7 +156,7 @@ export default function EstatesManagement() {
         </div>
       ) : !selectedEstate ? (
         /* 🏢 DIRECTORY MODULE LIST VIEW CONTAINER */
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col flex-1 min-h-0">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col flex-1  animate-in fade-in duration-150 min-h-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 shrink-0">
             <div>
               <h2 className="text-lg font-black text-slate-900 tracking-tight">
@@ -208,7 +186,6 @@ export default function EstatesManagement() {
                   <th className="p-3">Resident Density</th>
                   <th className="p-3">Guard Matrix</th>
                   <th className="p-3">Node Status</th>
-                  <th className="p-3 text-right">Quick Override</th>
                 </tr>
               </thead>
               <tbody className="text-xs divide-y divide-slate-50">
@@ -269,17 +246,6 @@ export default function EstatesManagement() {
                         >
                           {estate.status}
                         </span>
-                      </td>
-                      <td
-                        className="p-3 text-right"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          onClick={() => handleLockdown(estate.id, estate.name)}
-                          className="px-2 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold rounded-lg text-[10px] uppercase transition-colors"
-                        >
-                          Lockdown
-                        </button>
                       </td>
                     </tr>
                   ))

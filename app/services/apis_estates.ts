@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   EstateDetailsResponse,
   EstatesDirectoryResponse,
@@ -234,3 +235,70 @@ export const securityDb = {
   //   return data.logs as SecurityLog[];
   // },
 };
+
+/**
+ * Toggles or updates the active production access clearance matrix of a regional estate system administrator
+ */
+export async function updateEstateAdminStatus(
+  adminId: string,
+  status: "ACTIVE" | "SUSPENDED"
+): Promise<{ success: boolean; message: string; admin?: any }> {
+  try {
+    // Replace URL paths with whatever pattern matches your base setup config block
+    const response = await fetch("/api/master/estates/update-admin-status", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ adminId, status }),
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to commit admin security clearance context mutation:", error);
+    return {
+      success: false,
+      message: "Network request interface runtime failure processing transaction.",
+    };
+  }
+}
+
+/**
+ * Alternates the global routing state of an entire estate development cluster map 
+ */
+export async function updateEstateStatus(
+  estateId: string,
+  status: "ACTIVE" | "SUSPENDED"
+): Promise<{ success: boolean; message: string; estate?: any }> {
+  try {
+    const response = await fetch("/api/master/estates/update-estate-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estateId, status }),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Network interface error updating cluster status bounds:", error);
+    return { success: false, message: "Infrastructure request lifecycle timeout error." };
+  }
+}
+
+/**
+ * Destroys all transactional relational database lines tied to an estate node
+ */
+export async function deleteEstateAccount(
+  estateId: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await fetch("/api/master/estates/purge-estate-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estateId }),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Network runtime fault emitting critical execution vector flags:", error);
+    return { success: false, message: "Network route engine error completing operational workflow." };
+  }
+}

@@ -226,7 +226,7 @@ export default function EstateLocationsOverviewPage({
                         "No internal directions provided."}
                     </td>
                     <td className="p-4 font-mono font-bold text-slate-700">
-                      {loc.capacity ? `${loc.capacity} Pax` : "N/A"}
+                      {loc.capacity ? `${loc.capacity}` : "N/A"}
                     </td>
                     <td className="p-4">
                       <span className="inline-flex items-center font-mono font-black text-[11px] px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100/40">
@@ -313,7 +313,7 @@ export default function EstateLocationsOverviewPage({
               </div>
 
               {/* Permitted Operation Days JSON Config List */}
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
                   <SlidersHorizontal size={10} /> Operational Permitted Days
                   Framework
@@ -338,7 +338,7 @@ export default function EstateLocationsOverviewPage({
                     )}
                   </div>
                 )}
-              </div>
+              </div> */}
             </div>
 
             <div className="pt-4 border-t border-slate-100 mt-auto">

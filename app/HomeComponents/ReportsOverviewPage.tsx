@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import {
@@ -318,9 +319,6 @@ export default function ReportsOverviewPage({
                               View Guard({report.target_security_ids.length})
                             </button>
                           )}
-                        <span className="block mt-1 font-mono text-[9px] text-slate-300">
-                          UUID: {report.id}
-                        </span>
                       </td>
 
                       {/* Classification Matrix Display */}
@@ -341,7 +339,7 @@ export default function ReportsOverviewPage({
                               ? "RESIDENTIAL"
                               : currentType}
                           </span>
-                          <p className="text-[10px] text-slate-400 lowercase italic font-medium">
+                          <p className="text-[10px] text-slate-500 lowercase italic font-medium">
                             {report.category}
                           </p>
                         </div>
@@ -370,7 +368,7 @@ export default function ReportsOverviewPage({
                         {new Date(report.created_at).toLocaleDateString(
                           "en-GB",
                         )}
-                        <span className="block text-[10px] text-slate-400">
+                        <span className="block text-[10px] text-slate-500">
                           {getRelativeTime(report.created_at)}
                         </span>
                       </td>

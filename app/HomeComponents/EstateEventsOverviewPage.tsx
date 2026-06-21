@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { EstateEvent, EstateLocation } from "../services/types";
+import { formatDate, formatTime } from "../services/apis";
 
 interface EstateEventsOverviewPageProps {
   events: EstateEvent[];
@@ -232,8 +233,8 @@ export default function EstateEventsOverviewPage({
                       </td>
                       <td className="p-4 text-slate-600 space-y-0.5">
                         <p className="font-mono font-bold text-slate-800 text-[11px]">
-                          {ev.start_date}{" "}
-                          {ev.end_date !== ev.start_date && `to ${ev.end_date}`}
+                          {formatDate(ev.start_date)}{" "}
+                          {ev.end_date !== ev.start_date && `to ${formatDate(ev.end_date)}`}
                         </p>
                         <p className="text-slate-400 text-[10px]">
                           {ev.start_time.slice(0, 5)} -{" "}
@@ -285,7 +286,7 @@ export default function EstateEventsOverviewPage({
             <div className="flex items-center justify-between border-b border-slate-100 p-6 bg-white shrink-0">
               <div>
                 <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                  Complete Reservation Node Payload
+                  Event Info
                 </h2>
                 <p className="text-sm font-black text-slate-900 mt-0.5">
                   {selectedEvent.title}
@@ -304,7 +305,7 @@ export default function EstateEventsOverviewPage({
               {/* Event Graphic Banner Display Frame */}
               <div className="space-y-1.5">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                  Event Program Banner
+                  Event Banner
                 </span>
                 {selectedEvent.banner_url ? (
                   <div className="relative w-full h-44 rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 shadow-sm group">
@@ -353,7 +354,7 @@ export default function EstateEventsOverviewPage({
               {/* Location Framework Info & Venue Capacity Block */}
               <div className="space-y-1.5">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                  Assigned Infrastructure Venue Context
+                  Assigned Infrastructure Venue
                 </span>
                 {activeSelectedLocation ? (
                   <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm space-y-3">
@@ -378,7 +379,7 @@ export default function EstateEventsOverviewPage({
                       </span>
                       <span className="font-mono font-black text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-md">
                         {activeSelectedLocation.capacity
-                          ? `${activeSelectedLocation.capacity} Max Pax`
+                          ? `${activeSelectedLocation.capacity} Max`
                           : "Uncapped Bounds"}
                       </span>
                     </div>
@@ -388,11 +389,8 @@ export default function EstateEventsOverviewPage({
                     <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
                       <MapPin size={13} className="text-slate-400 shrink-0" />
                       {selectedEvent.venue_detail ||
-                        "No plain text string found."}
+                        "No LOcation Recorded"}
                     </div>
-                    <p className="text-[10px] text-slate-400 italic">
-                      Unmapped legacy raw text entry location marker block.
-                    </p>
                   </div>
                 )}
               </div>
@@ -402,10 +400,10 @@ export default function EstateEventsOverviewPage({
                 <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-sm space-y-0.5">
                   <p className="text-[9px] font-black uppercase text-slate-400 tracking-wide flex items-center gap-1">
                     <Users size={12} className="text-slate-400" /> Expected
-                    Bounds
+                    Number
                   </p>
                   <p className="text-base font-mono font-black text-slate-800">
-                    {selectedEvent.expected_guests || 0} Pax
+                    {selectedEvent.expected_guests || 0}
                   </p>
                 </div>
                 <div className="bg-indigo-600 p-3.5 rounded-xl space-y-0.5 shadow-sm text-white">
@@ -414,7 +412,7 @@ export default function EstateEventsOverviewPage({
                     Guests
                   </p>
                   <p className="text-base font-mono font-black">
-                    {selectedEvent.registered_guests || 0} Pax
+                    {selectedEvent.registered_guests || 0}
                   </p>
                 </div>
               </div>
@@ -430,8 +428,8 @@ export default function EstateEventsOverviewPage({
                       Start Constraint
                     </span>
                     <span className="font-mono font-bold text-slate-800">
-                      {selectedEvent.start_date} @{" "}
-                      {selectedEvent.start_time.slice(0, 5)}
+                      {formatDate(selectedEvent.start_date)} @{" "}
+                      {formatTime(selectedEvent.start_time)}
                     </span>
                   </div>
                   <div>
@@ -439,8 +437,8 @@ export default function EstateEventsOverviewPage({
                       Release/End Constraint
                     </span>
                     <span className="font-mono font-bold text-slate-800">
-                      {selectedEvent.end_date} @{" "}
-                      {selectedEvent.end_time.slice(0, 5)}
+                      {formatDate(selectedEvent.end_date)} @{" "}
+                      {formatTime(selectedEvent.end_time)}
                     </span>
                   </div>
                 </div>
@@ -449,7 +447,7 @@ export default function EstateEventsOverviewPage({
                   selectedEvent.booked_dates.length > 0 && (
                     <div className="pt-2.5 border-t border-slate-100 space-y-1.5">
                       <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
-                        Explicitly Booked Array Blocks
+                        Explicitly Booked Days
                       </span>
                       <div className="flex flex-wrap gap-1">
                         {selectedEvent.booked_dates.map((date, idx) => (
@@ -483,7 +481,7 @@ export default function EstateEventsOverviewPage({
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[10px]">
-                      Ticket Cost Valuation
+                      Ticket Cost
                     </span>
                     <span className="font-mono font-bold text-slate-800">
                       ₦

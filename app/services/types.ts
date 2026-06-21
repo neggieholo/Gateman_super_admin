@@ -355,7 +355,7 @@ export interface DashboardEstateNode {
   estate_code: string;
   lga: string;
   state: string;
-  status: "ACTIVE" | "SUSPENDED" | "PENDING";
+  status: "ACTIVE" | "SUSPENDED" ;
   joined_date: string;
   total_residents: number;
   active_residents_30_days: number;

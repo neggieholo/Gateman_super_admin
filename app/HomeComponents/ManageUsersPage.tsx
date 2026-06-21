@@ -346,7 +346,10 @@ export default function ManageUsersPage() {
       </div>
 
       {/* TAB CONTENT MATRICES */}
-      <div className="animate-in fade-in zoom-in-99 duration-150">
+      <div
+        key={loading ? "loading-state" : "loaded-state"}
+        className="animate-in fade-in zoom-in-99 duration-150"
+      >
         <div className="space-y-4">
           {/* Search Filter Strip */}
           <div className="flex items-center relative max-w-sm">
