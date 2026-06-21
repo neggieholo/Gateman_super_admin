@@ -376,6 +376,7 @@ export interface EstateDetailedContext extends DashboardEstateNode {
   reports: any[];
   locations: any[];
   services: any[];
+  vendors: Vendor[];
   service_requests: any[];
   admin: any;
   estate: any;
@@ -491,21 +492,20 @@ export interface EstateService {
   created_at: string;
 }
 
-// 3. Interface for Resident Work Order Bookings
+
 export interface ServiceRequest {
   id: string;
   estate_id: string;
   service_id: string | null;
-  service_name?: string; 
-  vendor_name?: string; 
   resident_id: string;
   resident_name: string;
-  resident_unit: string; // e.g., "Block G, Unit 4"
-  time_preferred: string; // e.g., "Morning (9AM - 12PM)"
-  description: string;
-  is_dispatched: boolean;
-  is_completed: boolean;
-  requested_at: string;
+  resident_unit: string;
+  time_preferred: string;
+  description: string | null;
+  is_dispatched: boolean | null;
+  is_completed: boolean | null;
+  requested_at: string | null;
+  dispatched_vendors: string[] | null;
 }
 export interface EventRegistration {
   id: string;
@@ -518,34 +518,33 @@ export interface EventRegistration {
   created_at: string;
 }
 
+
 export interface EstateEvent {
   id: string;
   estate_id: string;
   organizer_id: string | null;
   title: string;
   description: string | null;
-
-  // Date and Time (Postgres formats)
-  start_date: string; // ISO Date string (YYYY-MM-DD)
-  end_date: string;
+  start_date: string; // YYYY-MM-DD
+  end_date: string; // YYYY-MM-DD
   start_time: string; // HH:mm:ss
-  end_time: string;
-
-  venue_detail: string | null;
-  registered_number: number;
-  expected_guests: number;
+  end_time: string; // HH:mm:ss
+  venue_type: string | null;
+  venue_detail: string | null; 
+  expected_guests: number | null;
   banner_url: string | null;
-  booked_dates: string[];
-
-  // Financial & Security
-  is_paid: boolean;
-  ticket_price: string; // Decimal comes as string from Postgres
+  is_paid: boolean | null;
+  ticket_price: number | string | null;
   subaccount_id: string | null;
   ref_code: string;
-  is_approved: boolean;
-  is_rejected: boolean;
-
-  created_at: string;
+  is_approved: boolean | null;
+  is_rejected: boolean | null;
+  created_at: string | null;
+  bank_code: string | null;
+  bank_name: string | null;
+  account_number: string | null;
+  registered_guests: number;
+  booked_dates: string[]; // ARRAY of date strings
 }
 
 export interface EstateLocation {

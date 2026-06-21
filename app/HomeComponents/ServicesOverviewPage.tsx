@@ -14,14 +14,14 @@ import { EstateService, Vendor } from "../services/types";
 interface ServicesOverviewPageProps {
   services: EstateService[];
   estatename: string;
-  estateId: string;
+  vendors: Vendor[];
   onBack?: () => void;
 }
 
 export default function ServicesOverviewPage({
   services = [],
   estatename,
-  estateId,
+  vendors = [],
   onBack,
 }: ServicesOverviewPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,8 +65,12 @@ export default function ServicesOverviewPage({
       `Active field technicians assigned directly to this sector block.`,
     );
 
-    // Explicit array structural parsing safe-handling
-    const vendorsList = (service.vendors || []).map((v: any) => ({
+    // Match global context vendors array strictly with the current service ID
+    const serviceSpecificVendors = vendors.filter(
+      (v) => v.service_id === service.id,
+    );
+
+    const vendorsList = serviceSpecificVendors.map((v: any) => ({
       ...v,
       associatedServices: [service.service_name],
     }));
@@ -82,19 +86,23 @@ export default function ServicesOverviewPage({
       "All registered service firms mapped out alongside their assigned fields.",
     );
 
-    // Unique cross-reference array reduction map
+    // Unique cross-reference array reduction map across provided vendors array
     const vendorMap: { [key: string]: any } = {};
 
-    services.forEach((service) => {
-      (service.vendors || []).forEach((vendor: any) => {
-        if (!vendorMap[vendor.id]) {
-          vendorMap[vendor.id] = {
-            ...vendor,
-            associatedServices: new Set(),
-          };
-        }
-        vendorMap[vendor.id].associatedServices.add(service.service_name);
-      });
+    vendors.forEach((vendor) => {
+      // Find the service name that aligns with this vendor's service_id mapping context
+      const matchedService = services.find((s) => s.id === vendor.service_id);
+      const serviceLabel = matchedService
+        ? matchedService.service_name
+        : "General Utility";
+
+      if (!vendorMap[vendor.id]) {
+        vendorMap[vendor.id] = {
+          ...vendor,
+          associatedServices: new Set(),
+        };
+      }
+      vendorMap[vendor.id].associatedServices.add(serviceLabel);
     });
 
     const flattenedVendors = Object.values(vendorMap).map((vendor) => ({
@@ -250,7 +258,7 @@ export default function ServicesOverviewPage({
 
       {/* Main Container Data Frame with Isolated Scroll Engine */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="max-h-[500px] overflow-y-auto overflow-x-auto">
+        <div className="max-h-125 overflow-y-auto overflow-x-auto">
           <table className="w-full text-left border-collapse table-fixed">
             <thead className="sticky top-0 bg-slate-50 z-10 shadow-[0_1px_0_0_rgba(241,245,249,1)]">
               <tr className="text-[10px] font-black tracking-widest text-slate-400 uppercase">

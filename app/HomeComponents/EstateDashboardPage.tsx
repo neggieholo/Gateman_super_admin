@@ -3,8 +3,6 @@ import React, { useState, useEffect } from "react";
 import {
   AdminUser,
   EstateDetailedContext,
-  Invitation,
-  Post,
 } from "../services/types";
 import { getEstateDetailsContext } from "../services/apis_estates";
 import { useGatePassMetrics } from "../hooks/useGatePassMetrics";
@@ -14,6 +12,9 @@ import GatePassesOverviewPage from "./GatePassesOverviewPage";
 import CommunityPostsOverviewPage from "./CommunityPostsOverviewPage";
 import ReportsOverviewPage from "./ReportsOverviewPage";
 import ServicesOverviewPage from "./ServicesOverviewPage";
+import ServiceRequestsOverviewPage from "./ServiceRequestsOverviewPage";
+import EstateLocationsOverviewPage from "./EstateLocationsOverviewPage";
+import EstateEventsOverviewPage from "./EstateEventsOverviewPage";
 
 interface EstateDashboardPageProps {
   estateId: string;
@@ -30,12 +31,14 @@ export default function EstateDashboardPage({
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"metrics" | "charts">("metrics");
   const [selectedAdmin, setSelectedAdmin] = useState<AdminUser | null>(null);
-  const [invitationsSelected, setInvitationsSelected] = useState<
-    Invitation[] | null
-  >(null);
-  const [postsSelected, setPostsSelected] = useState<Post[] | null>(null);
-  const [reportsSelected, setReportsSelected] = useState<Post[] | null>(null);
-  const [servicesSelected, setServicesSelected] = useState<Post[] | null>(null);
+  const [invitationsSelected, setInvitationsSelected] =
+    useState<boolean>(false);
+  const [postsSelected, setPostsSelected] = useState<boolean>(false);
+  const [reportsSelected, setReportsSelected] = useState<boolean>(false);
+  const [servicesSelected, setServicesSelected] = useState<boolean>(false);
+  const [requestsSelected, setRequestsSelected] = useState<boolean>(false);
+  const [venuesSelected, setVenuesSelected] = useState<boolean>(false);
+  const [eventsSelected, setEventsSelected] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchEstateDetails() {
@@ -270,7 +273,7 @@ export default function EstateDashboardPage({
       <GatePassesOverviewPage
         passes={selectedEstate.gatepasses}
         estatename={selectedEstate.name}
-        onBack={() => setInvitationsSelected(null)}
+        onBack={() => setInvitationsSelected(false)}
       />
     );
   }
@@ -280,7 +283,7 @@ export default function EstateDashboardPage({
       <CommunityPostsOverviewPage
         posts={selectedEstate.posts}
         estatename={selectedEstate.name}
-        onBack={() => setPostsSelected(null)}
+        onBack={() => setPostsSelected(false)}
       />
     );
   }
@@ -291,7 +294,7 @@ export default function EstateDashboardPage({
         reports={selectedEstate.reports}
         estatename={selectedEstate.name}
         estateId={selectedEstate.id}
-        onBack={() => setReportsSelected(null)}
+        onBack={() => setReportsSelected(false)}
       />
     );
   }
@@ -301,8 +304,41 @@ export default function EstateDashboardPage({
       <ServicesOverviewPage
         services={selectedEstate.services}
         estatename={selectedEstate.name}
-        estateId={selectedEstate.id}
-        onBack={() => setServicesSelected(null)}
+        vendors={selectedEstate.vendors}
+        onBack={() => setServicesSelected(false)}
+      />
+    );
+  }
+
+  if (requestsSelected) {
+    return (
+      <ServiceRequestsOverviewPage
+        requests={selectedEstate.service_requests}
+        services={selectedEstate.services}
+        estatename={selectedEstate.name}
+        vendors={selectedEstate.vendors}
+        onBack={() => setRequestsSelected(false)}
+      />
+    );
+  }
+
+  if (venuesSelected) {
+    return (
+      <EstateLocationsOverviewPage
+        locations={selectedEstate.locations}
+        estatename={selectedEstate.name}
+        onBack={() => setVenuesSelected(false)}
+      />
+    );
+  }
+
+  if (eventsSelected) {
+    return (
+      <EstateEventsOverviewPage
+        events={selectedEstate.events}
+        estatename={selectedEstate.name}
+        locations={selectedEstate.locations}
+        onBack={() => setEventsSelected(false)}
       />
     );
   }
@@ -984,7 +1020,7 @@ export default function EstateDashboardPage({
                 <button
                   onClick={() => {
                     if (selectedEstate.gatepasses) {
-                      setInvitationsSelected(selectedEstate.gatepasses);
+                      setInvitationsSelected(true);
                     }
                   }}
                   className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors"
@@ -1039,7 +1075,7 @@ export default function EstateDashboardPage({
                 <button
                   onClick={() => {
                     if (selectedEstate.posts) {
-                      setPostsSelected(selectedEstate.posts);
+                      setPostsSelected(true);
                     }
                   }}
                   className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors"
@@ -1146,7 +1182,7 @@ export default function EstateDashboardPage({
                 <button
                   onClick={() => {
                     if (selectedEstate.reports) {
-                      setReportsSelected(selectedEstate.reports);
+                      setReportsSelected(true);
                     }
                   }}
                   className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors"
@@ -1193,7 +1229,7 @@ export default function EstateDashboardPage({
                 <button
                   onClick={() => {
                     if (selectedEstate.services) {
-                      setServicesSelected(selectedEstate.reports);
+                      setServicesSelected(true);
                     }
                   }}
                   className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors"
@@ -1251,11 +1287,11 @@ export default function EstateDashboardPage({
                   </div>
                 </div>
                 <button
-                  // onClick={() => {
-                  //   if (selectedEstate.services) {
-                  //     setServicesSelected(selectedEstate.reports);
-                  //   }
-                  // }}
+                  onClick={() => {
+                    if (selectedEstate.service_requests) {
+                      setRequestsSelected(true);
+                    }
+                  }}
                   className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors"
                 >
                   See Dispatch Ledger →
@@ -1298,7 +1334,11 @@ export default function EstateDashboardPage({
                   </div>
                 </div>
                 <button
-                  onClick={() => console.log("Deep dive locations")}
+                  onClick={() => {
+                    if (selectedEstate.locations) {
+                      setVenuesSelected(true);
+                    }
+                  }}
                   className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors"
                 >
                   Manage Facility Hub →
@@ -1394,7 +1434,11 @@ export default function EstateDashboardPage({
                   </div>
                 </div>
                 <button
-                  onClick={() => console.log("Deep dive events ledger")}
+                  onClick={() => {
+                    if (selectedEstate.events) {
+                      setEventsSelected(true);
+                    }
+                  }}
                   className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors"
                 >
                   Open Events Desk →
