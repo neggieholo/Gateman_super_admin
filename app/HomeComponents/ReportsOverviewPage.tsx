@@ -15,6 +15,7 @@ import {
 import { getRelativeTime } from "../services/apis";
 import { EstateReport, SecurityUser } from "../services/types";
 import { securityDb } from "../services/apis_estates";
+import AuditLogsPage from "./AuditLogs";
 
 interface CommunityReportsOverviewPageProps {
   reports: EstateReport[];
@@ -35,6 +36,7 @@ export default function ReportsOverviewPage({
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>("ALL");
   const [associatedGuards, setAssociatedGuards] = useState<SecurityUser[]>([]);
   const [showGuardsModal, setShowGuardsModal] = useState(false);
+  const [viewAllLogs, setViewAllLogs] = useState(false);
 
   // Operational Metrics Aggregation Engine
   const reportMetrics = {
@@ -89,6 +91,19 @@ export default function ReportsOverviewPage({
     }
   };
 
+  if (viewAllLogs) {
+    return (
+      <AuditLogsPage
+        estate_id={estateId}
+        name={`${estatename?.toUpperCase() || "UNKNOWN ESTATE"}`}
+        all={true}
+        type="estate_reports"
+        onBack={() => setViewAllLogs(false)}
+      />
+    );
+  }
+
+
   return (
     <div className="p-4 sm:p-6 bg-slate-50 animate-fadeIn space-y-6">
       {/* Header View Navigation */}
@@ -118,9 +133,7 @@ export default function ReportsOverviewPage({
         </div>
         <div>
           <button
-            onClick={() => {
-              console.log("Viewing logs");
-            }}
+            onClick={() => setViewAllLogs(true)}
             // disabled={isMutating}
             className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200`}
           >

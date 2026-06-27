@@ -94,6 +94,8 @@ export enum ViewState {
   ADD_USER = "add_user",
   ESTATES = "estates",
   SECURITY = "security",
+  RESIDENT = "resident",
+  GUARDS = "guards",
 }
 
 export interface UserContextType {
@@ -355,7 +357,7 @@ export interface DashboardEstateNode {
   estate_code: string;
   lga: string;
   state: string;
-  status: "ACTIVE" | "SUSPENDED" ;
+  status: "ACTIVE" | "SUSPENDED";
   joined_date: string;
   total_residents: number;
   active_residents_30_days: number;
@@ -365,6 +367,7 @@ export interface DashboardEstateNode {
 
 export interface EstatesDirectoryResponse {
   success: boolean;
+  estatesList: EstatesListRow[];
   count: number;
   estates: DashboardEstateNode[];
 }
@@ -492,7 +495,6 @@ export interface EstateService {
   created_at: string;
 }
 
-
 export interface ServiceRequest {
   id: string;
   estate_id: string;
@@ -518,7 +520,6 @@ export interface EventRegistration {
   created_at: string;
 }
 
-
 export interface EstateEvent {
   id: string;
   estate_id: string;
@@ -530,7 +531,7 @@ export interface EstateEvent {
   start_time: string; // HH:mm:ss
   end_time: string; // HH:mm:ss
   venue_type: string | null;
-  venue_detail: string | null; 
+  venue_detail: string | null;
   expected_guests: number | null;
   banner_url: string | null;
   is_paid: boolean | null;
@@ -564,23 +565,77 @@ export interface EstateLocation {
   created_at: string;
 }
 
+export interface LocationPair {
+  block: string;
+  unit: string[];
+}
+
+export interface Resident {
+  id: string;
+  estate_ids: string[];
+  name: string;
+  email: string;
+  phone?: string;
+  parent_account_id?: string;
+  sub_users: string[];
+  avatar?: string;
+  status: "ACTIVE" | "SUSPENDED";
+  locations: {
+    [estateId: string]: LocationPair[];
+  };
+  biometric_login: boolean;
+  estatesList: { estate_id: string; estate_name: string }[];
+  created_at: string;
+  last_activity_at?: string;
+}
+
 export interface SecurityUser {
   id: string;
   name: string;
   email: string;
   phone?: string;
-  avatar?: string;
   estate_id: string;
   push_token?: string;
   is_on_duty: boolean;
   last_checkin?: string;
   last_checkout?: string;
+  created_at: string;
+  role: string;
   checkin_location?: string;
   checkout_location?: string;
-  last_known_location?: string;
-  last_location_time?: string;
-  role: "SECURITY";
+  first_login: boolean;
+  avatar?: string;
   id_type?: string;
   id_front_url?: string;
   id_back_url?: string;
+  last_known_location?: string;
+  last_location_time?: string;
+  biometric_login: boolean;
+  password_changed: boolean;
+  status: "ACTIVE" | "SUSPENDED";
+  last_activity_at?: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  estate_id: string | null;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  user_role: "SUPER_ADMIN" | "ADMIN" | "TENANT" | "SYSTEM";
+  action_type: string;
+  target_resource: string;
+  target_id: string;
+  description: string;
+  state_before: any;
+  state_after: any;
+  ip_address: string;
+  user_agent: string;
+  urgency: "HIGH" | "MEDIUM" | "LOW" | "INFO";
+  created_at: string;
+}
+
+export interface EstatesListRow {
+  id: string;
+  name: string;
 }

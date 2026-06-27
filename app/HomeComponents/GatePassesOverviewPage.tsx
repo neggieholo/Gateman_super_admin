@@ -2,21 +2,26 @@
 import React, { useState } from "react";
 import { X, History, UserCheck, CalendarDays } from "lucide-react";
 import { Invitation } from "../services/types";
+import AuditLogsPage from "./AuditLogs";
 
 interface GatePassesOverviewPageProps {
   passes: Invitation[];
+  estate_id: string;
   estatename: string;
   onBack?: () => void;
 }
 
 export default function GatePassesOverviewPage({
   passes: initialPasses,
+  estate_id,
   estatename,
   onBack,
 }: GatePassesOverviewPageProps) {
   const [passesList, setPassesList] = useState<Invitation[]>(initialPasses);
   const [selectedPass, setSelectedPass] = useState<Invitation | null>(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
+  const [viewAllLogs, setViewAllLogs] = useState(false);
+  const [viewIndividualLogs, setViewIndividualLogs] = useState(false);
 
   // 🚨 Dynamic status evaluator mapping algorithm matching your established engine setup
   const getStatusStyle = (pass: Invitation) => {
@@ -64,6 +69,33 @@ export default function GatePassesOverviewPage({
     return days.map((d) => dayNames[d] || d).join(", ");
   };
 
+  if (viewAllLogs) {
+    return (
+      <AuditLogsPage
+        estate_id={estate_id}
+        name={`${estatename?.toUpperCase() || "UNKNOWN ESTATE"}`}
+        all={true}
+        type="gatePasses"
+        onBack={() => setViewAllLogs(false)}
+      />
+    );
+  }
+
+  if (viewIndividualLogs && selectedPass) {
+    return (
+      <AuditLogsPage
+        estate_id={estate_id}
+        all={true}
+        type="invitations"
+        target_id={selectedPass.id}
+        name={`${selectedPass?.guest_name.toUpperCase()} GUEST`}
+        onBack={() => {
+          setViewIndividualLogs(false);
+          setSelectedPass(null);
+        }}
+      />
+    );
+  }
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen animate-fadeIn">
       <div className="mx-auto space-y-6">
@@ -93,9 +125,7 @@ export default function GatePassesOverviewPage({
           </div>
           <div>
             <button
-              onClick={() => {
-                console.log("Viewing logs");
-              }}
+              onClick={() => setViewAllLogs(true)}
               // disabled={isMutating}
               className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200`}
             >
@@ -115,7 +145,6 @@ export default function GatePassesOverviewPage({
                   <th className="p-4">Invite Class</th>
                   <th className="p-4">Operational Windows</th>
                   <th className="p-4">State Engine</th>
-                  <th className="p-4 text-right">Audit Options</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
@@ -133,6 +162,7 @@ export default function GatePassesOverviewPage({
                   passesList.map((pass) => (
                     <tr
                       key={pass.id}
+                      onClick={() => setSelectedPass(pass)}
                       className="hover:bg-slate-50/50 transition-colors"
                     >
                       {/* Guest Identification Bundle */}
@@ -208,29 +238,6 @@ export default function GatePassesOverviewPage({
                         >
                           {getComputedStatusLabel(pass)}
                         </span>
-                      </td>
-
-                      {/* Command Interceptor Triggers */}
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() =>
-                              console.log(
-                                `Viewing activity logs placeholder tracking data hook for ID: ${pass.id}`,
-                              )
-                            }
-                            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-all inline-flex items-center gap-1 font-bold text-[11px]"
-                          >
-                            <History size={14} />
-                            <span>Logs</span>
-                          </button>
-                          <button
-                            onClick={() => setSelectedPass(pass)}
-                            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all"
-                          >
-                            Inspect Nodes
-                          </button>
-                        </div>
                       </td>
                     </tr>
                   ))
@@ -380,6 +387,16 @@ export default function GatePassesOverviewPage({
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="w-full p-3 flex justify-center">
+              <button
+                onClick={() => setViewIndividualLogs(true)}
+                className="p-1.5 hover:bg-slate-100 rounded-lg border text-slate-500 hover:text-slate-800 transition-all inline-flex items-center gap-1 font-bold text-[14px]"
+              >
+                <History size={14} />
+                <span>View Logs</span>
+              </button>
             </div>
 
             {/* Action Bottom Layout */}

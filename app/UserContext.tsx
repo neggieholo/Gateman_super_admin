@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, {
@@ -10,7 +9,7 @@ import React, {
 } from "react";
 // import { io, Socket } from 'socket.io-client';
 // import localforage from 'localforage';
-import { UserContextType } from "./services/types";
+import { EstatesListRow, UserContextType } from "./services/types";
 import { User } from "./services/types";
 
 interface UnifiedUserContextType extends UserContextType {
@@ -20,6 +19,8 @@ interface UnifiedUserContextType extends UserContextType {
   setIsSidebarOpen: (isOpen: boolean) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+  estatesList: EstatesListRow[];
+  setEstatesList: (list: EstatesListRow[]) => void
 }
 
 const UserContext = createContext<UnifiedUserContextType | undefined>(
@@ -29,6 +30,7 @@ const UserContext = createContext<UnifiedUserContextType | undefined>(
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [estatesList, setEstatesList] = useState<EstatesListRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   //   const [isConnected, setIsConnected] = useState(false);
@@ -76,6 +78,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         setIsSidebarOpen,
         isLoading,
         setIsLoading,
+        estatesList,
+        setEstatesList
       }}
     >
       {children}

@@ -77,7 +77,10 @@ export const changePassword = async (
   }
 };
 
-export const fetchReadableAddress = async (locationData: string) => {
+export const fetchReadableAddress = async (
+  locationData: string,
+  security: boolean = false,
+) => {
   let lat: number | null = null;
   let lng: number | null = null;
 
@@ -109,6 +112,10 @@ export const fetchReadableAddress = async (locationData: string) => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const data = await response.json();
+
+    if (security) {
+      return `${data.display_name}` || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    }
 
     return (
       `${data.address.state}, ${data.address.country}` ||
@@ -314,10 +321,13 @@ export const fetchAllSuperAdminsApi =
     }
   };
 
-export const fetchUserLogsApi = async (type: string, filters?: {
-  action_type?: string;
-  target_resource?: string;
-}) => {
+export const fetchUserLogsApi = async (
+  type: string,
+  filters?: {
+    action_type?: string;
+    target_resource?: string;
+  },
+) => {
   try {
     let url = "/api/master/user-logs";
     if (filters) {
@@ -404,21 +414,28 @@ export async function submitSuperAdminResetPasswordApi(payload: {
   }
 }
 
-export async function forceOverrideSubAccountPasswordApi(subAccountId: string, newPassword: string) {
+export async function forceOverrideSubAccountPasswordApi(
+  subAccountId: string,
+  newPassword: string,
+) {
   try {
-    const response = await fetch(`/api/master/${subAccountId}/override-password`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `/api/master/${subAccountId}/override-password`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ newPassword }),
+        credentials: "include",
       },
-      body: JSON.stringify({ newPassword }),
-      credentials: "include",
-    });
+    );
     return await response.json();
   } catch (err) {
     return {
       success: false,
-      message: "Network exception attempting administrative override pipeline transmission.",
+      message:
+        "Network exception attempting administrative override pipeline transmission.",
     };
   }
 }
@@ -426,7 +443,10 @@ export async function forceOverrideSubAccountPasswordApi(subAccountId: string, n
 /**
  * 🔐 PERSISTENCE LAYER: Explicitly modify MFA policies for a target administrator instance
  */
-export async function updateAdminMfaPolicyApi(userId: string, enforceMfa: boolean) {
+export async function updateAdminMfaPolicyApi(
+  userId: string,
+  enforceMfa: boolean,
+) {
   try {
     const response = await fetch(`/api/master/${userId}/mfa-policy`, {
       method: "PUT",
@@ -438,14 +458,18 @@ export async function updateAdminMfaPolicyApi(userId: string, enforceMfa: boolea
     });
     return await response.json();
   } catch (err) {
-    return { 
-      success: false, 
-      message: "Network synchronization failure updating security MFA policy configuration." 
+    return {
+      success: false,
+      message:
+        "Network synchronization failure updating security MFA policy configuration.",
     };
   }
 }
 
-export async function toggleAdminStatusApi(userId: string, targetActiveState: boolean) {
+export async function toggleAdminStatusApi(
+  userId: string,
+  targetActiveState: boolean,
+) {
   try {
     const response = await fetch(`/api/master/${userId}/toggle-status`, {
       method: "PUT",
@@ -454,10 +478,12 @@ export async function toggleAdminStatusApi(userId: string, targetActiveState: bo
     });
     return await response.json();
   } catch (err) {
-    return { success: false, message: "Network synchronization failure changing account status." };
+    return {
+      success: false,
+      message: "Network synchronization failure changing account status.",
+    };
   }
 }
-
 
 export async function deleteAdminProfileApi(userId: string) {
   try {
@@ -467,7 +493,9 @@ export async function deleteAdminProfileApi(userId: string) {
     });
     return await response.json();
   } catch (err) {
-    return { success: false, message: "Network failure executing hard deletion pipeline." };
+    return {
+      success: false,
+      message: "Network failure executing hard deletion pipeline.",
+    };
   }
 }
-

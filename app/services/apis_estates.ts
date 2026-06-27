@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
+  AuditLogEntry,
   EstateDetailsResponse,
   EstatesDirectoryResponse,
   SecurityUser,
@@ -241,7 +242,7 @@ export const securityDb = {
  */
 export async function updateEstateAdminStatus(
   adminId: string,
-  status: "ACTIVE" | "SUSPENDED"
+  status: "ACTIVE" | "SUSPENDED",
 ): Promise<{ success: boolean; message: string; admin?: any }> {
   try {
     // Replace URL paths with whatever pattern matches your base setup config block
@@ -251,36 +252,48 @@ export async function updateEstateAdminStatus(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ adminId, status }),
+      credentials: "include",
     });
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("Failed to commit admin security clearance context mutation:", error);
+    console.error(
+      "Failed to commit admin security clearance context mutation:",
+      error,
+    );
     return {
       success: false,
-      message: "Network request interface runtime failure processing transaction.",
+      message:
+        "Network request interface runtime failure processing transaction.",
     };
   }
 }
 
 /**
- * Alternates the global routing state of an entire estate development cluster map 
+ * Alternates the global routing state of an entire estate development cluster map
  */
 export async function updateEstateStatus(
   estateId: string,
-  status: "ACTIVE" | "SUSPENDED"
+  status: "ACTIVE" | "SUSPENDED",
 ): Promise<{ success: boolean; message: string; estate?: any }> {
   try {
     const response = await fetch("/api/master/estates/update-estate-status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ estateId, status }),
+      credentials: "include",
     });
     return await response.json();
   } catch (error) {
-    console.error("Network interface error updating cluster status bounds:", error);
-    return { success: false, message: "Infrastructure request lifecycle timeout error." };
+    console.error(
+      "Network interface error updating cluster status bounds:",
+      error,
+    );
+    return {
+      success: false,
+      message: "Infrastructure request lifecycle timeout error.",
+    };
   }
 }
 
@@ -288,17 +301,102 @@ export async function updateEstateStatus(
  * Destroys all transactional relational database lines tied to an estate node
  */
 export async function deleteEstateAccount(
-  estateId: string
+  estateId: string,
 ): Promise<{ success: boolean; message: string }> {
   try {
     const response = await fetch("/api/master/estates/purge-estate-account", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ estateId }),
+      credentials: "include",
     });
     return await response.json();
   } catch (error) {
-    console.error("Network runtime fault emitting critical execution vector flags:", error);
-    return { success: false, message: "Network route engine error completing operational workflow." };
+    console.error(
+      "Network runtime fault emitting critical execution vector flags:",
+      error,
+    );
+    return {
+      success: false,
+      message: "Network route engine error completing operational workflow.",
+    };
+  }
+}
+
+export async function fetchSpecifiedLogs(
+  id: string,
+): Promise<{ success: boolean; data: AuditLogEntry[] }> {
+  try {
+    const response = await fetch("/api/master/estates/audit-logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+      credentials: "include",
+    });
+    return await response.json();
+  } catch (error) {
+    console.error(
+      "Network runtime fault emitting critical execution vector flags:",
+      error,
+    );
+    return { success: false, data: [] };
+  }
+}
+
+export async function fetchAllLogs(
+  estate_id: string,
+  role: string,
+): Promise<{ success: boolean; data: AuditLogEntry[] }> {
+  try {
+    const response = await fetch("/api/master/estates/all-audit-logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estate_id, role }),
+      credentials: "include",
+    });
+    return await response.json();
+  } catch (error) {
+    console.error(
+      "Network runtime fault emitting critical execution vector flags:",
+      error,
+    );
+    return { success: false, data: [] };
+  }
+}
+
+export async function fetchUniversalLogs(): Promise<{ success: boolean; data: AuditLogEntry[] }> {
+  try {
+    const response = await fetch("/api/master/estates/overall-audit-logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+    return await response.json();
+  } catch (error) {
+    console.error(
+      "Network runtime fault emitting critical execution vector flags:",
+      error,
+    );
+    return { success: false, data: [] };
+  }
+}
+
+export async function fetchSectionLogs(
+  estate_id: string
+): Promise<{ success: boolean; data: AuditLogEntry[] }> {
+  try {
+    const response = await fetch("/api/master/estates/section-audit-logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estate_id }),
+      credentials: "include",
+    });
+    return await response.json();
+  } catch (error) {
+    console.error(
+      "Network runtime fault emitting critical execution vector flags:",
+      error,
+    );
+    return { success: false, data: [] };
   }
 }

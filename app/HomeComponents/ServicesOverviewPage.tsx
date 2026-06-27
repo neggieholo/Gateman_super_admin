@@ -7,12 +7,14 @@ import {
   FileText,
   X,
   Users,
-  Briefcase,
+  Briefcase
 } from "lucide-react";
 import { EstateService, Vendor } from "../services/types";
+import AuditLogsPage from "./AuditLogs";
 
 interface ServicesOverviewPageProps {
   services: EstateService[];
+  estate_id:string;
   estatename: string;
   vendors: Vendor[];
   onBack?: () => void;
@@ -20,6 +22,7 @@ interface ServicesOverviewPageProps {
 
 export default function ServicesOverviewPage({
   services = [],
+  estate_id,
   estatename,
   vendors = [],
   onBack,
@@ -33,6 +36,7 @@ export default function ServicesOverviewPage({
   const [modalSubtitle, setModalSubtitle] = useState("");
   const [displayedVendors, setDisplayedVendors] = useState<any[]>([]);
   const [showVendorsModal, setShowVendorsModal] = useState(false);
+  const [viewAllLogs, setViewAllLogs] = useState(false);
 
   // Operational Metrics Aggregation Engine
   const serviceMetrics = {
@@ -114,6 +118,18 @@ export default function ServicesOverviewPage({
     setShowVendorsModal(true);
   };
 
+  if (viewAllLogs) {
+    return (
+      <AuditLogsPage
+        estate_id={estate_id}
+        name={`${estatename?.toUpperCase() || "UNKNOWN ESTATE"}`}
+        all={true}
+        type="estate_services"
+        onBack={() => setViewAllLogs(false)}
+      />
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 bg-slate-50 animate-fadeIn space-y-6">
       {/* Header View Navigation */}
@@ -141,7 +157,13 @@ export default function ServicesOverviewPage({
             </div>
           </div>
         </div>
-        <div>
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => setViewAllLogs(true)}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200"
+          >
+            View All Logs
+          </button>
           <button
             onClick={handleViewAllSystemVendors}
             className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-slate-900 text-white hover:bg-slate-800 flex items-center gap-2"

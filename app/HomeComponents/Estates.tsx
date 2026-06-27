@@ -2,14 +2,14 @@
 
 import React, { useCallback, useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { DashboardEstateNode } from "../services/types";
+import { DashboardEstateNode, EstatesListRow } from "../services/types";
 import { getEstatesDashboard } from "../services/apis_estates";
 import EstateDashboardPage from "./EstateDashboardPage";
 import { showAccessDeniedToast } from "./ManageUsersPage";
 import { useUser } from "../UserContext";
 
 export default function EstatesManagement() {
-  const { user } = useUser();
+  const { user, setEstatesList } = useUser();
   const [estates, setEstates] = useState<DashboardEstateNode[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEstate, setSelectedEstate] =
@@ -36,6 +36,7 @@ export default function EstatesManagement() {
       const res = await getEstatesDashboard();
       if (res.success) {
         setEstates(res.estates);
+        setEstatesList(res.estatesList);
         setTotalEstates(res.count);
       } else {
         toast.error("Failed to load estates directory metadata.");

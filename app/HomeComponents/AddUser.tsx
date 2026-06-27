@@ -15,6 +15,7 @@ import {
   EyeClosed,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { SYSTEM_PERMISSIONS } from "../services/data";
 
 // Import your brand new live data connection methods
 import {
@@ -86,7 +87,7 @@ export default function AddSuperAdmin() {
         `Access Denied. You require "All Access" permission to grant this.`,
         {
           id: "unauthorized-permissions-lock",
-          duration: 3000, 
+          duration: 3000,
           position: "top-center",
           style: {
             fontWeight: "bold",
@@ -508,7 +509,7 @@ export default function AddSuperAdmin() {
                       key={pId}
                       className="px-1.5 py-0.5 bg-white text-slate-400 border border-slate-100 rounded-md text-[8px] font-mono font-semibold"
                     >
-                      {pId}
+                      {SYSTEM_PERMISSIONS.find((e) => e.id === pId)?.name || pId}
                     </span>
                   ))}
                 </div>

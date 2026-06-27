@@ -5,10 +5,12 @@ import {
   Home,
   ChevronDown,
   LogOut,
-  Inbox,
   User2,
   Users,
   Shield,
+  Building2,
+  Contact2,
+  ShieldAlert,
 } from "lucide-react";
 import { ViewState } from "../services/types";
 import { useUser } from "../UserContext";
@@ -47,30 +49,47 @@ export default function SideBar({
     }
   };
 
-  const navItems = [
+  // Group 1: General Core Admin Navigation
+  const generalNavItems = [
     {
       id: ViewState.DASHBOARD,
-      label: "Home",
+      label: "Home Dashboard",
       icon: Home,
       url: "/home/dashboard",
     },
     {
       id: ViewState.ADD_USER,
-      label: "Users",
+      label: "System Users",
       icon: Users,
       url: "/home/add_user",
     },
     {
       id: ViewState.SECURITY,
-      label: "Security",
+      label: "Security Controls",
       icon: Shield,
       url: "/home/security",
     },
+  ];
+
+  // Group 2: Estate Core Ecosystem Nodes (Linked via UI Category Heading)
+  const estateNavItems = [
     {
       id: ViewState.ESTATES,
-      label: "Estates",
-      icon: Inbox,
+      label: "Estates Registry",
+      icon: Building2,
       url: "/home/estates",
+    },
+    {
+      id: ViewState.RESIDENT,
+      label: "Residents",
+      icon: Contact2,
+      url: "/home/estate_residents",
+    },
+    {
+      id: ViewState.GUARDS,
+      label: "Guards",
+      icon: ShieldAlert,
+      url: "/home/estate_guards",
     },
   ];
 
@@ -78,94 +97,116 @@ export default function SideBar({
     return "bg-emerald-100 text-emerald-700 border border-emerald-200";
   };
 
+  // Helper renderer to eliminate code duplication across map variants
+  const renderNavButton = (item: (typeof generalNavItems)[0]) => {
+    const isActive = pathname === item.url;
+    return (
+      <button
+        key={item.id}
+        onClick={() => {
+          afterNavClick();
+          router.push(item.url);
+        }}
+        className={`flex items-center font-sans space-x-3 w-full px-4 py-3 rounded-xl transition-all duration-200 group ${
+          isActive
+            ? "bg-white text-primary"
+            : "text-white/70 hover:bg-white/10 hover:text-white"
+        }`}
+      >
+        <item.icon
+          size={19}
+          className={`transition-colors ${isActive ? "text-primary" : "text-white/60 group-hover:text-white"}`}
+          strokeWidth={isActive ? 2.5 : 2}
+        />
+        <span className="text-[13px] font-semibold tracking-tight">
+          {item.label}
+        </span>
+
+        {isActive && (
+          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
+        )}
+      </button>
+    );
+  };
+
   return (
     <>
       <aside
-        className={`${isOpen ? "" : "hidden"} flex flex-col w-60 p-4 bg-gm-charcoal h-screen border-r border-slate-100 z-50 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)]`}
+        className={`${
+          isOpen ? "" : "hidden"
+        } flex flex-col w-60 bg-gm-charcoal h-screen border-r border-slate-100/10 z-50 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)]`}
       >
-        <div className="p-8 flex items-center space-x-3">
-          <div className="relative w-full h-14 backdrop-blur-md rounded-xl flex items-center justify-center overflow-hidden">
+        {/* Brand Identity / Logo Header Layout */}
+        <div className="p-6 flex items-center border-b border-white/5">
+          <div className="relative w-full h-12 rounded-xl flex items-center justify-center overflow-hidden bg-white/5">
             <Image
               src="/gmlogo.jpg"
-              alt="Gatenan Logo"
+              alt="GateMan Logo"
               fill
               className="object-contain p-1"
             />
           </div>
         </div>
 
-        <div className="flex-1 px-6 py-6 space-y-2">
-          {navItems.map((item) => {
-            const isActive = pathname === item.url;
+        {/* Master Navigation Links Container */}
+        <div className="flex-1 px-4 py-6 space-y-6 overflow-y-auto scrollbar-none">
+          {/* Section A: Core System Routes */}
+          <div className="space-y-1">
+            {generalNavItems.map(renderNavButton)}
+          </div>
 
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  afterNavClick();
-                  router.push(item.url);
-                }}
-                className={`flex items-center space-x-3 w-full px-4 py-3.5 rounded-2xl transition-all duration-200 group ${
-                  isActive
-                    ? "bg-white text-primary font-semibold shadow-sm" // White bg, Primary text
-                    : "text-white/70 hover:bg-white/10 hover:text-white" // Ghost white on primary bg
-                }`}
-              >
-                <item.icon
-                  size={22}
-                  className={`transition-colors ${isActive ? "text-primary" : "text-white"}`}
-                  strokeWidth={isActive ? 2.5 : 2}
-                />
-                <span className={isActive ? "text-primary" : "text-white"}>
-                  {item.label}
-                </span>
-
-                {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
-                )}
-              </button>
-            );
-          })}
+          {/* Section B: Unified Estate Registry Elements Mapping */}
+          <div className="space-y-1 pt-2">
+            <div className="px-4 mb-2 flex items-center gap-1.5">
+              <span className="w-1 h-3 rounded-full bg-indigo-500/80" />
+              <label className="text-[9px] text-white/40 font-black uppercase tracking-widest block">
+                Estate Ecosystem
+              </label>
+            </div>
+            {estateNavItems.map(renderNavButton)}
+          </div>
         </div>
 
-        {/* User Profile / Role Switcher */}
-        <div className="p-6 border-t border-slate-50 relative">
+        {/* User Profile / Role Switcher Footer */}
+        <div className="p-4 border-t border-white/5 relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center space-x-3 px-3 py-3 w-full rounded-2xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 group"
+            className="flex items-center space-x-3 px-3 py-2.5 w-full rounded-xl hover:bg-white/5 transition-colors border border-transparent group"
           >
-            <div className="relative text-white group-hover:text-indigo-700 transition-colors">
-              <User2 />
-              <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></div>
+            <div className="relative text-white/70 group-hover:text-white transition-colors">
+              <User2 size={20} />
+              <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-gm-charcoal rounded-full"></div>
             </div>
             <div className="flex flex-col items-start flex-1 min-w-0">
-              {/* <span className="text-sm font-bold text-white truncate w-full text-left group-hover:text-indigo-700 transition-colors">
-                {user?.full_name}
-              </span> */}
+              <span className="text-xs font-bold text-white truncate w-full text-left">
+                {user?.full_name || "GateMan Admin"}
+              </span>
               <div className="flex items-center mt-0.5">
                 <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide ${getRoleBadgeColor()}`}
+                  className={`text-[9px] px-1.5 py-0.5 rounded-md font-extrabold uppercase tracking-wide ${getRoleBadgeColor()}`}
                 >
                   Super Admin
                 </span>
               </div>
             </div>
             <ChevronDown
-              size={16}
-              className={`text-slate-400 transition-transform ${showUserMenu ? "rotate-180" : ""}`}
+              size={14}
+              className={`text-white/40 transition-transform ${
+                showUserMenu ? "rotate-180" : ""
+              }`}
             />
           </button>
 
-          {/* Role Switcher Menu */}
+          {/* Role Switcher Menu Popup */}
           {showUserMenu && (
-            <div className="absolute bottom-full left-6 right-6 mb-4 bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-fade-in z-50 ring-1 ring-black/5">
-              <div className="p-1 border-t border-slate-100 mt-1">
+            <div className="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-in slide-in-from-bottom-2 duration-150">
+              <div className="p-1">
                 <button
                   onClick={handleLogout}
-                  className="w-full text-left px-4 py-3 rounded-xl text-sm flex items-center gap-2 text-rose-500 hover:bg-rose-50 transition-colors font-medium"
+                  className="w-full text-left px-3 py-2.5 rounded-lg text-xs flex items-center gap-2 text-rose-600 hover:bg-rose-50 transition-colors font-bold"
                 >
-                  <LogOut size={16} />
-                  Sign Out
+                  <LogOut size={14} />
+                  Sign Out Session
                 </button>
               </div>
             </div>

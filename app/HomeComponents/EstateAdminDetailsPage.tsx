@@ -8,6 +8,7 @@ import { useUser } from "../UserContext";
 import { showAccessDeniedToast } from "./ManageUsersPage";
 import SecurityActionWarningModal from "./SecurityActionWarningModal";
 import toast from "react-hot-toast";
+import AuditLogsPage from "./AuditLogs";
 
 interface AdminUserDetailsPageProps {
   admin: AdminUser;
@@ -27,6 +28,7 @@ export default function AdminUserDetailsPage({
     admin.status || "ACTIVE",
   );
   const [isMutating, setIsMutating] = useState(false);
+  const [viewLogs, setViewLogs] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [isWarningOpen, setIsWarningOpen] = useState(false);
   const [warningConfig, setWarningConfig] = useState<{
@@ -65,14 +67,14 @@ export default function AdminUserDetailsPage({
         setCurrentStatus(targetStatus);
         toggleAccess(adminId, targetStatus);
       } else {
-       toast.error(
+        toast.error(
           res.message ||
             "Failed to commit status update target configuration model.",
         );
       }
     } catch (err) {
       console.error("Component UI suspension pipeline exception thrown:", err);
-     toast.error(
+      toast.error(
         "An unexpected infrastructure context tracking validation mismatch occurred.",
       );
     } finally {
@@ -96,6 +98,10 @@ export default function AdminUserDetailsPage({
     });
     setIsWarningOpen(true);
   };
+
+  if (viewLogs) {
+    return <AuditLogsPage id={admin.id} onBack={() => setViewLogs(false)} />;
+  }
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 h-[calc(100vh-100px)] overflow-hidden flex flex-col justify-between min-h-0 animate-fadeIn">
@@ -177,9 +183,9 @@ export default function AdminUserDetailsPage({
               <div className="flex gap-3">
                 <button
                   onClick={() => {
-                    console.log("Viewing logs");
+                    setViewLogs(true);
                   }}
-                  // disabled={isMutating}
+                  disabled={isMutating}
                   className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200`}
                 >
                   View Logs History

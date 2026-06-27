@@ -16,6 +16,8 @@ import SecurityActionWarningModal from "./SecurityActionWarningModal";
 import { useUser } from "../UserContext";
 import { showAccessDeniedToast } from "./ManageUsersPage";
 import toast from "react-hot-toast";
+import ResidentsOverviewPage from "./EstateResidents";
+import SecurityPersonnelPage from "./EstateSecurity";
 
 interface EstateDashboardPageProps {
   estateId: string;
@@ -44,10 +46,22 @@ export default function EstateDashboardPage({
   const [venuesSelected, setVenuesSelected] = useState<boolean>(false);
   const [eventsSelected, setEventsSelected] = useState<boolean>(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [residentsSelected, setResidentsSelected] = useState<boolean>(false);
+  const [securitySelected, setSecuritySelected] = useState<boolean>(false);
   const savedScrollPositions = useRef<{ [key: string]: number }>({
     metrics: 0,
     charts: 0,
   });
+  const canViewResidents =
+    user?.permissions.includes("all-access") ||
+    user?.permissions.includes("estates_management") ||
+    user?.permissions.includes("view_estate_residents");
+
+  const canViewSecurity =
+    user?.permissions.includes("all-access") ||
+    user?.permissions.includes("estates_management") ||
+    user?.permissions.includes("view_estate_security");
+
   const [isWarningOpen, setIsWarningOpen] = useState(false);
   const [warningConfig, setWarningConfig] = useState<{
     title: string;
@@ -106,8 +120,8 @@ export default function EstateDashboardPage({
   ) => {
     setWarningConfig({
       title: "Purge Admin Account Vector",
-      message: `CRITICAL SUSPEND CHALLENGE: Are you completely certain you want to suspend "${estate_name}'s" account?`,
-      confirmText: "Suspend Account",
+      message: `CRITICAL SUSPEND CHALLENGE: Are you completely certain you want to ${targetStatus === 'SUSPENDED' ?'suspend':'reactivate'} "${estate_name}'s" account?`,
+      confirmText: targetStatus==='SUSPENDED'? 'Suspend Account' : 'Activate Account',
       variant: "warning",
       onConfirm: async () => {
         await handleToggleEstateStatus(estateId, targetStatus);
@@ -210,6 +224,37 @@ export default function EstateDashboardPage({
         status: nextStatus,
       };
     });
+  };
+
+  
+  const handleDeleteEstateAccount = async (id: string) => {
+    const canDeleteEstate =
+      user?.permissions.includes("estates_management") ||
+      user?.permissions.includes("delete_estate") ||
+      user?.permissions.includes("all-access");
+
+    if (!canDeleteEstate) {
+      showAccessDeniedToast();
+      return;
+    }
+    try {
+      setIsDeleting(true);
+
+      const res = await deleteEstateAccount(id);
+
+      if (res.success) {
+        // handleEstateStatusUpdate(targetStatus);
+      } else {
+        toast.error(res.message || "Failed to purge estate account.");
+      }
+    } catch (err) {
+      console.error("Component UI suspension pipeline exception thrown:", err);
+      toast.error(
+        "An unexpected infrastructure context tracking validation mismatch occurred.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const passMetrics = useGatePassMetrics(selectedEstate?.gatepasses);
@@ -335,39 +380,19 @@ export default function EstateDashboardPage({
     }
   });
 
-  // Helper macro helper to calculate clean inline width bars percentage metrics without blowing layout boundaries
   const getPercentage = (value: number, total: number) => {
     if (!total || total === 0) return "0%";
     return `${Math.min(100, Math.round((value / total) * 100))}%`;
   };
 
-  const handleDeleteEstateAccount = async (id: string) => {
-    const canDeleteEstate =
-      user?.permissions.includes("estates_management") ||
-      user?.permissions.includes("delete_estate") ||
-      user?.permissions.includes("all-access");
 
-    if (!canDeleteEstate) {
-      showAccessDeniedToast();
-      return;
-    }
-    try {
-      setIsDeleting(true);
-
-      const res = await deleteEstateAccount(id);
-
-      if (res.success) {
-        // handleEstateStatusUpdate(targetStatus);
-      } else {
-        toast.error(res.message || "Failed to purge estate account.");
-      }
-    } catch (err) {
-      console.error("Component UI suspension pipeline exception thrown:", err);
-      toast.error(
-        "An unexpected infrastructure context tracking validation mismatch occurred.",
-      );
-    } finally {
-      setIsDeleting(false);
+  const estateResdentsOrSecurity = (type: "resident" | "security") => {
+    if (type === "resident") {
+      if (!canViewResidents) return showAccessDeniedToast();
+      setResidentsSelected(true);
+    } else {
+      if (!canViewSecurity) return showAccessDeniedToast();
+      setSecuritySelected(true);
     }
   };
 
@@ -415,6 +440,7 @@ export default function EstateDashboardPage({
     return (
       <GatePassesOverviewPage
         passes={selectedEstate.gatepasses}
+        estate_id={selectedEstate.id}
         estatename={selectedEstate.name}
         onBack={() => setInvitationsSelected(false)}
       />
@@ -425,6 +451,7 @@ export default function EstateDashboardPage({
     return (
       <CommunityPostsOverviewPage
         posts={selectedEstate.posts}
+        estate_id={selectedEstate.id}
         estatename={selectedEstate.name}
         onBack={() => setPostsSelected(false)}
       />
@@ -446,6 +473,7 @@ export default function EstateDashboardPage({
     return (
       <ServicesOverviewPage
         services={selectedEstate.services}
+        estate_id={selectedEstate.id}
         estatename={selectedEstate.name}
         vendors={selectedEstate.vendors}
         onBack={() => setServicesSelected(false)}
@@ -458,6 +486,7 @@ export default function EstateDashboardPage({
       <ServiceRequestsOverviewPage
         requests={selectedEstate.service_requests}
         services={selectedEstate.services}
+        estate_id={selectedEstate.id}
         estatename={selectedEstate.name}
         vendors={selectedEstate.vendors}
         onBack={() => setRequestsSelected(false)}
@@ -482,6 +511,26 @@ export default function EstateDashboardPage({
         estatename={selectedEstate.name}
         locations={selectedEstate.locations}
         onBack={() => setEventsSelected(false)}
+      />
+    );
+  }
+
+  if (residentsSelected) {
+    return (
+      <ResidentsOverviewPage
+        estatename={selectedEstate.name}
+        estateId={selectedEstate.id}
+        onBack={() => setResidentsSelected(false)}
+      />
+    );
+  }
+
+  if (securitySelected) {
+    return (
+      <SecurityPersonnelPage
+        estatename={selectedEstate.name}
+        estateId={selectedEstate.id}
+        onBack={() => setSecuritySelected(false)}
       />
     );
   }
@@ -547,7 +596,10 @@ export default function EstateDashboardPage({
             </button>
             <button
               onClick={() =>
-                triggerEstateDeleteWarning(selectedEstate.id,selectedEstate.name)
+                triggerEstateDeleteWarning(
+                  selectedEstate.id,
+                  selectedEstate.name,
+                )
               }
               className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
             >
@@ -1600,24 +1652,27 @@ export default function EstateDashboardPage({
       </div>
 
       {/* ─── BOTTOM ADMINISTRATIVE ACTIONS BAR ─── */}
-      <div className="mt-8 max-w-7xl mx-auto w-full pt-4 border-t border-slate-200 flex flex-col sm:flex-row justify-end items-center gap-3">
-        <button
-          onClick={() =>
-            console.log("Routing to Residents Directory Context...")
-          }
-          className="w-full sm:w-auto px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 font-bold text-xs rounded-xl shadow-sm transition-colors flex items-center justify-center gap-1.5"
-        >
-          👥 View Residents Info
-        </button>
-        <button
-          onClick={() =>
-            console.log("Routing to Security/Guard Roster Scope...")
-          }
-          className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-sm transition-colors flex items-center justify-center gap-1.5"
-        >
-          🛡️ View Security Info
-        </button>
-      </div>
+      {(canViewResidents || canViewSecurity) && (
+        <div className="mt-8 max-w-7xl mx-auto w-full pt-4 border-t border-slate-200 flex flex-col sm:flex-row justify-end items-center gap-3">
+          {canViewResidents && (
+            <button
+              onClick={() => estateResdentsOrSecurity("resident")}
+              className="w-full sm:w-auto px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 font-bold text-xs rounded-xl shadow-sm transition-colors flex items-center justify-center gap-1.5"
+            >
+              👥 View Residents Info
+            </button>
+          )}
+
+          {canViewSecurity && (
+            <button
+              onClick={() => estateResdentsOrSecurity("security")}
+              className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-sm transition-colors flex items-center justify-center gap-1.5"
+            >
+              🛡️ View Security Info
+            </button>
+          )}
+        </div>
+      )}
       <SecurityActionWarningModal
         isOpen={isWarningOpen}
         onClose={() => setIsWarningOpen(false)}

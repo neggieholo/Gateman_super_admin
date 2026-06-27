@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useMemo } from "react";
 import {
   Search,
@@ -12,13 +11,16 @@ import {
   SlidersHorizontal,
   Briefcase,
   ExternalLink,
+  History,
 } from "lucide-react";
 import { EstateService, ServiceRequest, Vendor } from "../services/types";
+import AuditLogsPage from "./AuditLogs";
 
 interface ServiceRequestsOverviewPageProps {
   requests: ServiceRequest[];
   services: EstateService[];
   vendors: Vendor[];
+  estate_id: string;
   estatename: string;
   onBack?: () => void;
 }
@@ -27,6 +29,7 @@ export default function ServiceRequestsOverviewPage({
   requests = [],
   services = [],
   vendors = [],
+  estate_id,
   estatename,
   onBack,
 }: ServiceRequestsOverviewPageProps) {
@@ -40,6 +43,8 @@ export default function ServiceRequestsOverviewPage({
   const [selectedRequestForModal, setSelectedRequestForModal] =
     useState<ServiceRequest | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [viewAllLogs, setViewAllLogs] = useState(false);
+  const [viewIndividualLogs, setViewIndividualLogs] = useState(false);
 
   // 📊 Live Dynamic Analytics Computations
   const analytics = useMemo(() => {
@@ -138,6 +143,34 @@ export default function ServiceRequestsOverviewPage({
     setShowDetailModal(true);
   };
 
+  if (viewAllLogs) {
+    return (
+      <AuditLogsPage
+        estate_id={estate_id}
+        name={`${estatename?.toUpperCase() || "UNKNOWN ESTATE"}`}
+        all={true}
+        type="service_requests"
+        onBack={() => setViewAllLogs(false)}
+      />
+    );
+  }
+
+  if (viewIndividualLogs) {
+    return (
+      <AuditLogsPage
+        estate_id={estate_id}
+        name={`${estatename?.toUpperCase() || "UNKNOWN ESTATE"}`}
+        all={true}
+        target_id={selectedRequestForModal?.id}
+        type="service_requests"
+        onBack={() => {
+          setViewIndividualLogs(false);
+          setSelectedRequestForModal(null);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 bg-slate-50 animate-fadeIn space-y-6 flex-1 min-h-0 overflow-y-auto">
       {/* Top Controls Header Desk */}
@@ -162,6 +195,15 @@ export default function ServiceRequestsOverviewPage({
               {estatename}
             </span>
           </div>
+        </div>
+        <div>
+          <button
+            onClick={() => setViewAllLogs(true)}
+            // disabled={isMutating}
+            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200`}
+          >
+            View Logs History
+          </button>
         </div>
       </div>
 
@@ -574,6 +616,15 @@ export default function ServiceRequestsOverviewPage({
                   </div>
                 )}
               </div>
+            </div>
+            <div className="w-full p-3 flex justify-center">
+              <button
+                onClick={() => setViewIndividualLogs(true)}
+                className="p-1.5 hover:bg-slate-100 rounded-lg border text-slate-500 hover:text-slate-800 transition-all inline-flex items-center gap-1 font-bold text-[14px]"
+              >
+                <History size={14} />
+                <span>View Logs</span>
+              </button>
             </div>
 
             {/* Bottom Panel Close Control Frame */}
