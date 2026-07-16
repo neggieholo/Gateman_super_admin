@@ -1,96 +1,284 @@
+"use client";
 
-import React from 'react';
-import { QrCode, Users, AlertTriangle, TrendingUp, ShieldCheck } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from "react";
+import {
+  Shield,
+  Users,
+  Radio,
+  Building2,
+  UserCheck,
+  Percent,
+  CircleDot,
+} from "lucide-react";
+import { SYSTEM_PERMISSIONS } from "@/app/services/data";
+import { DashboardAnalyticsPayload } from "@/app/services/types";
+import { getDashboardAnalytics } from "@/app/services/apis_estates";
+import { useUser } from "@/app/UserContext";
 
+export default function MobDashboard() {
+  const { setEstatesList } = useUser();
+  const [analytics, setAnalytics] = useState<DashboardAnalyticsPayload | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(true);
 
-export default function MobDashboard () {
-  const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+  useEffect(() => {
+    const loadDashboardMetrics = async () => {
+      try {
+        setLoading(true);
+        const data = await getDashboardAnalytics();
+        if (data.success) {
+          setAnalytics(data);
+          setEstatesList(data.estatesList);
+        }
+      } catch (err) {
+        console.error("Failed to parse core telemetry metrics shards:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadDashboardMetrics();
+  }, []);
 
+  // --- 📊 DYNAMIC PERMISSION STRUCTURAL MATRIX CHART ---
+  const permissionDistribution = useMemo(() => {
+    // 1. Map root/parent targets from local config definitions
+    const parentKeys = SYSTEM_PERMISSIONS.filter(
+      (p) => p.parent_permission === null,
+    ).map((p) => p.id);
+
+    const chartMap: Record<string, number> = {};
+    parentKeys.forEach((k) => {
+      chartMap[k] = 0;
+    });
+    chartMap["all-access"] = 0;
+
+    if (!analytics?.permissionDistribution?.chartMap) {
+      return { chartMap, totalAllocatedTokens: 0 };
+    }
+
+    // 2. Populate values calculated directly by your backend DB optimization loop
+    Object.entries(analytics.permissionDistribution.chartMap).forEach(
+      ([key, value]) => {
+        chartMap[key] = value;
+      },
+    );
+
+    return {
+      chartMap,
+      totalAllocatedTokens:
+        analytics.permissionDistribution.totalAllocatedTokens || 0,
+    };
+  }, [analytics]);
+
+  if (loading || !analytics) {
     return (
-      <div className="space-y-8 pb-24">
-         <div className="flex justify-between items-end">
-          <div>
-             <div className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">{currentDate}</div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Overview</h1>
-          </div>          
-        </div>
-
-        {/* Admin Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow duration-300">
-            <div className="flex items-center space-x-4 mb-4">
-              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><Users size={24} /></div>
-              <div>
-                 <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">Occupancy</span>
-              </div>
-            </div>
-            <div className="flex items-baseline gap-2">
-                <div className="text-4xl font-bold text-slate-900 tracking-tight">94%</div>
-                <div className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">+2%</div>
-            </div>
-            <div className="mt-2 text-sm text-slate-500 font-medium">142 / 150 Units Occupied</div>
-          </div>
-
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow duration-300">
-            <div className="flex items-center space-x-4 mb-4">
-              <div className="p-3 bg-teal-50 text-teal-600 rounded-2xl"><QrCode size={24} /></div>
-              <div>
-                 <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">Active Passes</span>
-              </div>
-            </div>
-             <div className="flex items-baseline gap-2">
-                <div className="text-4xl font-bold text-slate-900 tracking-tight">28</div>
-                <div className="text-xs font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">Valid</div>
-            </div>
-            <div className="mt-2 text-sm text-slate-500 font-medium">Currently active visitor codes</div>
-          </div>
-
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow duration-300">
-            <div className="flex items-center space-x-4 mb-4">
-              <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><AlertTriangle size={24} /></div>
-              <div>
-                 <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">Alerts</span>
-              </div>
-            </div>
-            <div className="flex items-baseline gap-2">
-                <div className="text-4xl font-bold text-slate-900 tracking-tight">3</div>
-                <div className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">New</div>
-            </div>
-            <div className="mt-2 text-sm text-slate-500 font-medium">Open maintenance requests</div>
-          </div>
-        </div>
-
-        {/* Action Cards */}
-        <div className="grid grid-cols-2 gap-6">
-           <button 
-            //  onClick={() => setView(ViewState.ACCESS)}
-             className="group relative overflow-hidden bg-slate-900 text-white p-8 rounded-3xl shadow-xl flex flex-col items-start justify-between min-h-40 hover:scale-[1.02] transition-transform duration-300"
-           >
-             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-16 -mt-32 blur-3xl group-hover:bg-white/10 transition-colors"></div>
-             
-             <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl mb-4 border border-white/10">
-               <ShieldCheck size={28} />
-             </div>
-             <div className="text-left relative z-10">
-               <span className="block font-bold text-xl mb-1">Security Log</span>
-               <span className="text-sm text-slate-400 group-hover:text-slate-300 transition-colors">Monitor all gate activity</span>
-             </div>
-           </button>
-
-           <button 
-            //  onClick={() => setView(ViewState.UTILITIES)}
-             className="group bg-white text-slate-900 border border-slate-200 p-8 rounded-3xl shadow-sm flex flex-col items-start justify-between min-h-40 hover:shadow-xl hover:border-slate-300 transition-all duration-300"
-           >
-             <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl mb-4 group-hover:scale-110 transition-transform">
-               <TrendingUp size={28} />
-             </div>
-             <div className="text-left">
-               <span className="block font-bold text-xl mb-1">Billing Reports</span>
-               <span className="text-sm text-slate-500">Manage unit utilities</span>
-             </div>
-           </button>
-        </div>
+      <div className="p-8 text-center font-mono text-xs font-bold tracking-widest text-slate-400 animate-pulse">
+        HYDRATING PLATFORM TELEMETRY FABRIC SHARDS...
       </div>
     );
-  
-  };
+  }
+
+  const { superAdminStats, ecosystemStats } = analytics;
+
+  return (
+    // 📱 Scaled down padding on mobile viewports (p-4) to prevent outer container viewport squishing
+    <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 bg-slate-50 min-h-screen font-sans text-slate-800">
+      {/* ========================================================================= */}
+      {/* SECTION 1: IDENTITY ACCESS MANAGEMENT (SUPER ADMINS SECTION)              */}
+      {/* ========================================================================= */}
+      <div className="p-4 sm:p-6 bg-white border border-slate-200/80 rounded-2xl shadow-sm space-y-6">
+        <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+          <Shield className="h-5 w-5 text-indigo-600 shrink-0" />
+          <div>
+            <h2 className="text-sm sm:text-base font-black text-slate-900 tracking-tight uppercase">
+              Identity Access Control Plane
+            </h2>
+          </div>
+        </div>
+
+        {/* STATS MATRIX SECTION 1 ROW */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* DIV A: Overall User Registry Ratio */}
+          {/* 📱 Switched from layout row to column space on mobile grids to prevent visual text crowding */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                Super Admin Population
+              </span>
+              <p className="text-xl sm:text-2xl font-black text-slate-900">
+                {superAdminStats.total}{" "}
+                <span className="text-xs font-bold text-slate-400">
+                  Total Users
+                </span>
+              </p>
+              <div className="text-[11px] font-mono font-bold text-slate-500 mt-1 flex flex-wrap items-center gap-2">
+                <span className="text-indigo-600">
+                  Main: {superAdminStats.mainAccounts}
+                </span>
+                <span className="text-slate-300 hidden sm:inline">|</span>
+                <span className="text-amber-600">
+                  Sub: {superAdminStats.subAccounts}
+                </span>
+              </div>
+            </div>
+            <div className="h-10 w-10 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center font-bold font-mono text-sm self-start sm:self-auto shrink-0">
+              {superAdminStats.mainAccounts}:{superAdminStats.subAccounts}
+            </div>
+          </div>
+
+          {/* DIV B: Total Real-Time Connected Matrix */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block font-mono">
+                Telemetry Node Status
+              </span>
+              <p className="text-xl sm:text-2xl font-black text-emerald-600 flex items-center gap-2">
+                {superAdminStats.liveAdmins}
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+              </p>
+              <span className="text-[11px] font-medium text-slate-400 block leading-tight">
+                Active sessions{" "}
+                {superAdminStats.pendingRequests > 0 &&
+                  `(+${superAdminStats.pendingRequests} pending)`}
+              </span>
+            </div>
+            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl self-start sm:self-auto shrink-0">
+              <Radio className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+
+        {/* DIV C: Dynamic Permissions Allocation Vector Horizontal Bar Chart */}
+        <div className="p-4 border border-slate-100 rounded-xl bg-slate-50/50 space-y-4">
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <Percent size={12} /> Root Permission Scope Allocation Weight
+            </h3>
+            <p className="text-[10px] text-slate-400">
+              Aggregated allocation weight of parent system policies
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {Object.entries(permissionDistribution.chartMap).map(
+              ([key, value]) => {
+                const labelNode = SYSTEM_PERMISSIONS.find((p) => p.id === key);
+                const displayName = labelNode
+                  ? labelNode.name
+                  : "Full Administrative Access (Root)";
+
+                const percentage =
+                  permissionDistribution.totalAllocatedTokens > 0
+                    ? Math.round(
+                        (value / permissionDistribution.totalAllocatedTokens) *
+                          100,
+                      )
+                    : 0;
+
+                return (
+                  <div key={key} className="space-y-1">
+                    {/* 📱 Switched text elements to flex-col on mobile to prevent overlapping long permission strings */}
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-4 text-[11px] font-medium">
+                      <span className="text-slate-700 font-bold truncate block max-w-full sm:max-w-xs">
+                        {displayName}
+                      </span>
+                      <span className="font-mono text-slate-400 text-[10px] shrink-0">
+                        {value} hits ({percentage}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 ${
+                          key === "all-access"
+                            ? "bg-indigo-600"
+                            : key === "users_management"
+                              ? "bg-sky-500"
+                              : key === "estates_management"
+                                ? "bg-emerald-500"
+                                : key === "logs_management"
+                                  ? "bg-amber-500"
+                                  : "bg-purple-500"
+                        }`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              },
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* SECTION 2: ESTATE WORKSPACE EDGE TELEMETRY                                */}
+      {/* ========================================================================= */}
+      <div className="p-4 sm:p-6 bg-white border border-slate-200/80 rounded-2xl shadow-sm space-y-6">
+        <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+          <Building2 className="h-5 w-5 text-emerald-600 shrink-0" />
+          <div>
+            <h2 className="text-sm sm:text-base font-black text-slate-900 tracking-tight uppercase">
+              Ecosystem Telemetry Real-time Matrix
+            </h2>
+            <p className="text-[11px] text-slate-400 font-medium">
+              Property nodes and external edge accounts activity tracking
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* DIV A: Managed Infrastructure Totals */}
+          <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-1">
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+              Property Infrastructure
+            </span>
+            <p className="text-xl sm:text-2xl font-black text-slate-900">
+              {ecosystemStats.totalEstates}
+            </p>
+            <span className="text-[10px] font-medium text-slate-400 block font-mono tracking-tight">
+              COMPUTED ACTIVE NODES ON DISPATCH
+            </span>
+          </div>
+
+          {/* DIV B: Residents Telemetry Shards */}
+          <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                Resident Core Accounts
+              </span>
+              <span className="h-2 w-2 rounded-full bg-sky-500 animate-pulse shrink-0" />
+            </div>
+            <p className="text-xl sm:text-2xl font-black text-slate-900">
+              {ecosystemStats.totalResidents.toLocaleString()}
+            </p>
+            <div className="text-[11px] font-mono font-bold text-sky-600 flex items-center gap-1 flex-wrap">
+              <CircleDot size={10} className="shrink-0" />
+              <span>{ecosystemStats.activeResidents30m} active in 30m</span>
+            </div>
+          </div>
+
+          {/* DIV C: Gate Guards Security Terminal Shards */}
+          <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                Active Gate Guards Terminals
+              </span>
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            </div>
+            <p className="text-xl sm:text-2xl font-black text-slate-900">
+              {ecosystemStats.totalGuards.toLocaleString()}
+            </p>
+            <div className="text-[11px] font-mono font-bold text-emerald-600 flex items-center gap-1 flex-wrap">
+              <UserCheck size={10} className="shrink-0" />
+              <span>{ecosystemStats.activeGuards30m} active in 30m</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

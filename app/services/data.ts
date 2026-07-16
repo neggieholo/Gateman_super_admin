@@ -92,19 +92,9 @@ export const SYSTEM_PERMISSIONS: PermissionNode[] = [
     parent_permission: "estates_management",
   },
   {
-    id: "view_estate_resident_logs",
-    name: "View Estate Resident Logs",
-    parent_permission: "logs_management",
-  },
-  {
     id: "delete_estate_resident_account",
     name: "Delete Estate Resident Account",
     parent_permission: "estates_management",
-  },
-  {
-    id: "view_estate_security_logs",
-    name: "View Estate Security Logs",
-    parent_permission: "logs_management",
   },
   {
     id: "delete_estate_security_account",

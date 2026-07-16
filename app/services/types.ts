@@ -367,7 +367,6 @@ export interface DashboardEstateNode {
 
 export interface EstatesDirectoryResponse {
   success: boolean;
-  estatesList: EstatesListRow[];
   count: number;
   estates: DashboardEstateNode[];
 }
@@ -638,4 +637,47 @@ export interface AuditLogEntry {
 export interface EstatesListRow {
   id: string;
   name: string;
+}
+
+export interface DashboardAnalyticsPayload {
+  success: boolean;
+  superAdminStats: {
+    total: number;
+    subAccounts: number;
+    mainAccounts: number;
+    liveAdmins: number;
+    pendingRequests: number;
+  };
+  permissionDistribution: {
+    chartMap: Record<string, number>;
+    totalAllocatedTokens: number;
+  };
+  ecosystemStats: {
+    totalEstates: number;
+    totalResidents: number;
+    activeResidents30m: number;
+    totalGuards: number;
+    activeGuards30m: number;
+  };
+  estatesList: EstatesListRow[];
+  message?: string;
+}
+
+
+export interface notification {
+  id: string;
+  estate_id: number;
+  user_id: number | null;
+  recipient_role: "tenant" | "security" | "admin";
+  title: string;
+  message: string;
+  type: "general" | "emergency" | "entry" | "invite" | "announcement";
+  created_at: string;
+  is_deleted: boolean;
+}
+
+export interface FetchNotificationsResponse {
+  success: boolean;
+  list: notification[];
+  lastReadAt: string;
 }

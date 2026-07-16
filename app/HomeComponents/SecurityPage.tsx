@@ -13,11 +13,12 @@ import SecurityIncidentsPage from "./SecurityIncidentsPage";
 const SECURITY_TAB_PERMISSIONS = {
   perimeter: "view_security_perimeter",
   policies: "view_security_policies",
-  incidents: "view_security_incidents",
+  // incidents: "view_security_incidents",
   logs: "view_user_logs",
 };
 
-type SecurityTabVariant = "perimeter" | "policies" | "incidents" | "logs";
+// type SecurityTabVariant = "perimeter" | "policies" | "incidents" | "logs";
+type SecurityTabVariant = "perimeter" | "policies" | "logs";
 
 export default function SecurityPage() {
   const [activeTab, setActiveTab] = useState<SecurityTabVariant>("perimeter");
@@ -122,7 +123,7 @@ export default function SecurityPage() {
           <KeyRound size={14} /> System Policies
         </button>
 
-        <button
+        {/* <button
           onClick={() => handleTabSwitch("incidents")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-oswald font-black uppercase tracking-wider transition-all flex-1 min-w-32.5 justify-center ${
             activeTab === "incidents"
@@ -131,7 +132,7 @@ export default function SecurityPage() {
           }`}
         >
           <ShieldAlert size={14} /> Incident Center
-        </button>
+        </button> */}
 
         <button
           onClick={() => handleTabSwitch("logs")}
@@ -151,7 +152,7 @@ export default function SecurityPage() {
           <>
             {activeTab === "perimeter" && <NetworkPerimeterPage />}
             {activeTab === "policies" && <SystemPoliciesPage />}
-            {activeTab === "incidents" && <SecurityIncidentsPage />}
+            {/* {activeTab === "incidents" && <SecurityIncidentsPage />} */}
 
             {/* 🔄 Reusing your completed component layout straight out of the box! */}
             {activeTab === "logs" && <UserLogsPage type="security"/>}

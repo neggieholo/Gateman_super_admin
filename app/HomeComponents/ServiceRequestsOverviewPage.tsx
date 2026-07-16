@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { EstateService, ServiceRequest, Vendor } from "../services/types";
 import AuditLogsPage from "./AuditLogs";
+import { showAccessDeniedToast } from "./ManageUsersPage";
+import { useUser } from "../UserContext";
 
 interface ServiceRequestsOverviewPageProps {
   requests: ServiceRequest[];
@@ -33,6 +35,7 @@ export default function ServiceRequestsOverviewPage({
   estatename,
   onBack,
 }: ServiceRequestsOverviewPageProps) {
+  const { user } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [serviceTypeFilter, setServiceTypeFilter] = useState<string>("ALL");
@@ -143,6 +146,23 @@ export default function ServiceRequestsOverviewPage({
     setShowDetailModal(true);
   };
 
+  const handleViewLogs = (all: boolean) => {
+    const canViewLOgs =
+      user?.permissions.includes("logs_management") ||
+      user?.permissions.includes("view_estate_logs") ||
+      user?.permissions.includes("all-access");
+
+    if (!canViewLOgs) {
+      showAccessDeniedToast();
+      return;
+    }
+    if (all) {
+      setViewAllLogs(true);
+    } else {
+      setViewIndividualLogs(true);
+    }
+  };
+
   if (viewAllLogs) {
     return (
       <AuditLogsPage
@@ -185,7 +205,7 @@ export default function ServiceRequestsOverviewPage({
             </button>
           )}
           <h1 className="text-lg font-black text-slate-900 tracking-tight uppercase font-montserrat">
-            Maintenance Dispatch Pipeline
+            Service Dispatch Pipeline
           </h1>
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <span className="font-bold text-[10px] uppercase tracking-wider text-slate-400">
@@ -198,7 +218,7 @@ export default function ServiceRequestsOverviewPage({
         </div>
         <div>
           <button
-            onClick={() => setViewAllLogs(true)}
+            onClick={() => handleViewLogs(true)}
             // disabled={isMutating}
             className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200`}
           >
@@ -619,7 +639,7 @@ export default function ServiceRequestsOverviewPage({
             </div>
             <div className="w-full p-3 flex justify-center">
               <button
-                onClick={() => setViewIndividualLogs(true)}
+                onClick={() => handleViewLogs(false)}
                 className="p-1.5 hover:bg-slate-100 rounded-lg border text-slate-500 hover:text-slate-800 transition-all inline-flex items-center gap-1 font-bold text-[14px]"
               >
                 <History size={14} />

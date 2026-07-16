@@ -16,6 +16,8 @@ import { getRelativeTime } from "../services/apis";
 import { EstateReport, SecurityUser } from "../services/types";
 import { securityDb } from "../services/apis_estates";
 import AuditLogsPage from "./AuditLogs";
+import { useUser } from "../UserContext";
+import { showAccessDeniedToast } from "./ManageUsersPage";
 
 interface CommunityReportsOverviewPageProps {
   reports: EstateReport[];
@@ -30,6 +32,7 @@ export default function ReportsOverviewPage({
   estateId,
   onBack,
 }: CommunityReportsOverviewPageProps) {
+  const { user } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] =
     useState<string>("ALL");
@@ -91,6 +94,19 @@ export default function ReportsOverviewPage({
     }
   };
 
+  const handleViewLogs = () => {
+    const canViewLOgs =
+      user?.permissions.includes("logs_management") ||
+      user?.permissions.includes("view_estate_logs") ||
+      user?.permissions.includes("all-access");
+
+    if (!canViewLOgs) {
+      showAccessDeniedToast();
+      return;
+    }
+    setViewAllLogs(true);
+  };
+
   if (viewAllLogs) {
     return (
       <AuditLogsPage
@@ -102,7 +118,6 @@ export default function ReportsOverviewPage({
       />
     );
   }
-
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 animate-fadeIn space-y-6">
@@ -133,7 +148,7 @@ export default function ReportsOverviewPage({
         </div>
         <div>
           <button
-            onClick={() => setViewAllLogs(true)}
+            onClick={handleViewLogs}
             // disabled={isMutating}
             className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200`}
           >

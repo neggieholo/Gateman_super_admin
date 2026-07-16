@@ -7,7 +7,7 @@ import { checkSession } from "../services/apis";
 // import Link from 'next/link';
 
 const HomeNavbar = () => {
-  const { user, setUser, isLoading, setIsLoading } = useUser();
+  const { user, setUser, isLoading, setIsLoading, badgeCount } = useUser();
   const router = useRouter();
 
   const [mounted, setMounted] = useState(false);
@@ -56,15 +56,15 @@ const HomeNavbar = () => {
       <div className="flex items-center gap-8">
         {/* NOTIFICATION HUB */}
         <div className="flex items-center gap-2">
-          <div className="indicator group">
-            {/* {badgeCount > 0 && (
+          {/* <div className="indicator group">
+            {badgeCount > 0 && (
               <span className="indicator-item badge badge-primary badge-sm text-white font-bold border-white border-2 scale-110 group-hover:animate-bounce">
                 {badgeCount}
               </span>
-            )} */}
+            )}
             <button
               className="btn btn-ghost btn-circle bg-slate-50 hover:bg-primary/10 hover:text-primary transition-all duration-300 shadow-sm border mx-2 border-slate-100"
-              onClick={() => router.push("/home/dashboard")}
+              onClick={() => router.push("/home/notifications")}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -81,7 +81,7 @@ const HomeNavbar = () => {
                 />
               </svg>
             </button>
-          </div>
+          </div> */}
 
           <button
             className="btn btn-ghost btn-circle bg-slate-50 hover:bg-secondary/10 hover:text-secondary transition-all duration-300 shadow-sm border mx-4 border-slate-100"

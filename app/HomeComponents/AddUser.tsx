@@ -255,7 +255,7 @@ export default function AddSuperAdmin() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans antialiased text-slate-700">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans antialiased text-gm-navy">
       {/* LEFT TWO COLUMNS: CORE ACCOUNT CREATION FORM MATRIX */}
       <form
         onSubmit={handleCreateUserWorkspace}
@@ -264,11 +264,11 @@ export default function AddSuperAdmin() {
         {/* Core Identity Panel Card Frame */}
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-100/40 space-y-5">
           <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-            <div className="p-2.5 bg-slate-900 rounded-xl text-white">
+            <div className="p-2.5 bg-gm-navy rounded-xl text-white">
               <UserPlus size={18} />
             </div>
             <div>
-              <h3 className="text-base font-montserrat font-black text-slate-900 uppercase tracking-tight">
+              <h3 className="text-base font-montserrat font-black text-gm-navy uppercase tracking-tight">
                 Identity Profile Specification
               </h3>
               <p className="text-xs text-slate-400 font-medium">
@@ -288,8 +288,8 @@ export default function AddSuperAdmin() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="e.g. Simon"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200/60 rounded-xl font-bold text-slate-900 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                placeholder="e.g. Name"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200/60 rounded-xl font-bold text-gm-navy text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
             </div>
             <div className="space-y-1.5">
@@ -301,8 +301,8 @@ export default function AddSuperAdmin() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="simon@gateman.com"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200/60 rounded-xl font-bold text-slate-900 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                placeholder="name@gateman.com"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200/60 rounded-xl font-bold text-gm-navy text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
             </div>
 
@@ -316,7 +316,7 @@ export default function AddSuperAdmin() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="*********"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200/60 rounded-xl font-bold text-slate-900 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200/60 rounded-xl font-bold text-gm-navy text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                 />
                 <button
                   type="button"
@@ -337,7 +337,7 @@ export default function AddSuperAdmin() {
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder="+234 800 000 0000"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200/60 rounded-xl font-bold text-slate-900 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200/60 rounded-xl font-bold text-gm-navy text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
             </div>
           </div>
@@ -351,7 +351,7 @@ export default function AddSuperAdmin() {
                 className="rounded text-indigo-600 focus:ring-indigo-500 mt-0.5"
               />
               <div>
-                <span className="block text-xs font-bold text-slate-900 leading-tight">
+                <span className="block text-xs font-bold text-gm-navy leading-tight">
                   Enforce Password Renewal
                 </span>
                 <span className="text-[10px] text-slate-400 font-medium leading-normal">
@@ -368,7 +368,7 @@ export default function AddSuperAdmin() {
                 className="rounded text-indigo-600 focus:ring-indigo-500 mt-0.5"
               />
               <div>
-                <span className="block text-xs font-bold text-slate-900 leading-tight">
+                <span className="block text-xs font-bold text-gm-navy leading-tight">
                   Isolate as Managed Sub-Account
                 </span>
                 <span className="text-[10px] text-slate-400 font-medium leading-normal">
@@ -387,7 +387,7 @@ export default function AddSuperAdmin() {
               <Shield size={18} />
             </div>
             <div>
-              <h3 className="text-base font-montserrat font-black text-slate-900 uppercase tracking-tight">
+              <h3 className="text-base font-montserrat font-black text-gm-navy uppercase tracking-tight">
                 Operations Authorization
               </h3>
               <p className="text-xs text-slate-400 font-medium">
@@ -416,7 +416,7 @@ export default function AddSuperAdmin() {
                     <button
                       type="button"
                       onClick={() => handleTogglePermission(parent.id, true)}
-                      className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[9px] font-oswald font-black uppercase tracking-wider transition-all border ${isParentChecked ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-400 border-slate-200 hover:text-slate-700"}`}
+                      className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[9px] font-oswald font-black uppercase tracking-wider transition-all border ${isParentChecked ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-400 border-slate-200 hover:text-gm-navy"}`}
                     >
                       {isParentChecked ? "Revoke Group" : "Authorize Group"}
                     </button>
@@ -478,7 +478,7 @@ export default function AddSuperAdmin() {
       {/* RIGHT ONE COLUMN: CUSTOM ROLES PRESET MAPPING TEMPLATES */}
       <div className="space-y-6 lg:h-[calc(100vh-140px)] lg:overflow-y-auto pr-1">
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-100/40 space-y-4">
-          <div className="flex items-center gap-2 text-slate-900 border-b border-slate-50 pb-3">
+          <div className="flex items-center gap-2 text-gm-navy border-b border-slate-50 pb-3">
             <Layers size={16} className="text-slate-400" />
             <h4 className="text-xs font-oswald font-black uppercase tracking-wider">
               Saved Role Layout Templates
@@ -492,7 +492,7 @@ export default function AddSuperAdmin() {
                 className="p-3.5 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col gap-2 hover:border-slate-300/80 transition-all"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-900">
+                  <span className="text-xs font-bold text-gm-navy">
                     {role.role_name}
                   </span>
                   <button
@@ -507,7 +507,7 @@ export default function AddSuperAdmin() {
                   {role.permission_ids?.map((pId) => (
                     <span
                       key={pId}
-                      className="px-1.5 py-0.5 bg-white text-slate-400 border border-slate-100 rounded-md text-[8px] font-mono font-semibold"
+                      className="px-1.5 py-0.5 bg-white text-slate-500 border border-slate-100 rounded-md text-[12px] font-mono font-semibold"
                     >
                       {SYSTEM_PERMISSIONS.find((e) => e.id === pId)?.name || pId}
                     </span>
@@ -519,7 +519,7 @@ export default function AddSuperAdmin() {
         </div>
 
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-100/40 space-y-4">
-          <div className="flex items-center gap-2 text-slate-900 border-b border-slate-50 pb-3">
+          <div className="flex items-center gap-2 text-gm-navy border-b border-slate-50 pb-3">
             <Save size={16} className="text-slate-400" />
             <h4 className="text-xs font-oswald font-black uppercase tracking-wider">
               Save Selections As Role Blueprint
@@ -544,7 +544,7 @@ export default function AddSuperAdmin() {
                 value={customRoleName}
                 onChange={(e) => setCustomRoleName(e.target.value)}
                 placeholder="e.g. Audit Lead Controller"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200/60 rounded-xl font-bold text-slate-900 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200/60 rounded-xl font-bold text-gm-navy text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
             </div>
 

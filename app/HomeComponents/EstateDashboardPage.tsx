@@ -844,7 +844,7 @@ export default function EstateDashboardPage({
               <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
                 <div>
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-1">
-                    Maintenance Funnel pipeline
+                    Service Funnel pipeline
                   </h3>
                   <p className="text-[11px] text-slate-400 mb-6">
                     Workflow load metrics tracking residential deployments.
@@ -1445,7 +1445,7 @@ export default function EstateDashboardPage({
                   <div className="flex justify-between items-start border-b border-slate-100 pb-3 mb-4">
                     <div>
                       <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                        Maintenance & Utility Requests
+                        Service Requests
                       </h3>
                       <p className="text-[11px] text-slate-400">
                         Live service orders tracking metrics.

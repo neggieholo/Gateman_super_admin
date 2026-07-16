@@ -17,10 +17,12 @@ import { Post, Comment, Like } from "../services/types";
 import { getRelativeTime } from "../services/apis";
 import { communityApi } from "../services/apis_estates";
 import AuditLogsPage from "./AuditLogs";
+import { showAccessDeniedToast } from "./ManageUsersPage";
+import { useUser } from "../UserContext";
 
 interface CommunityPostsOverviewPageProps {
   posts: Post[];
-  estate_id:string;
+  estate_id: string;
   estatename: string;
   onBack?: () => void;
 }
@@ -31,7 +33,7 @@ export default function CommunityPostsOverviewPage({
   estatename,
   onBack,
 }: CommunityPostsOverviewPageProps) {
-  // Feed Layout & Data Matrix States
+  const { user } = useUser();
   const [postsList, setPostsList] = useState<Post[]>(initialPosts);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -168,6 +170,19 @@ export default function CommunityPostsOverviewPage({
     }
   };
 
+  const handleViewLogs = () => {
+    const canViewLOgs =
+      user?.permissions.includes("logs_management") ||
+      user?.permissions.includes("view_estate_logs") ||
+      user?.permissions.includes("all-access");
+
+    if (!canViewLOgs) {
+      showAccessDeniedToast();
+      return;
+    }
+    setViewAllLogs(true);
+  };
+
   if (viewAllLogs) {
     return (
       <AuditLogsPage
@@ -179,7 +194,6 @@ export default function CommunityPostsOverviewPage({
       />
     );
   }
-
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 animate-fadeIn">
@@ -211,7 +225,7 @@ export default function CommunityPostsOverviewPage({
           </div>
           <div>
             <button
-              onClick={() => setViewAllLogs(true)}
+              onClick={handleViewLogs}
               // disabled={isMutating}
               className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200`}
             >
@@ -255,7 +269,7 @@ export default function CommunityPostsOverviewPage({
 
         {/* Data Grid Matrix Layout */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex-1 min-h-0">
-          <div className="max-h-[600px] overflow-y-auto overflow-x-auto">
+          <div className="max-h-150 overflow-y-auto overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 bg-slate-50 z-10 shadow-[0_1px_0_0_rgba(241,245,249,1)]">
                 <tr className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
@@ -468,7 +482,7 @@ export default function CommunityPostsOverviewPage({
               </div>
 
               {/* Tab Frame Dynamic View Stream Renderer */}
-              <div className="space-y-3 min-h-[200px]">
+              <div className="space-y-3 min-h-50">
                 {loadingSubData ? (
                   <div className="flex flex-col items-center justify-center py-12">
                     <Loader2

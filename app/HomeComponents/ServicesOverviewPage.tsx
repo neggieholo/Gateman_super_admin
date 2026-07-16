@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { EstateService, Vendor } from "../services/types";
 import AuditLogsPage from "./AuditLogs";
+import { showAccessDeniedToast } from "./ManageUsersPage";
+import { useUser } from "../UserContext";
 
 interface ServicesOverviewPageProps {
   services: EstateService[];
@@ -27,6 +29,7 @@ export default function ServicesOverviewPage({
   vendors = [],
   onBack,
 }: ServicesOverviewPageProps) {
+  const {user} = useUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAvailabilityFilter, setSelectedAvailabilityFilter] =
     useState<string>("ALL");
@@ -118,6 +121,19 @@ export default function ServicesOverviewPage({
     setShowVendorsModal(true);
   };
 
+  const handleViewLogs = () => {
+    const canViewLOgs =
+      user?.permissions.includes("logs_management") ||
+      user?.permissions.includes("view_estate_logs") ||
+      user?.permissions.includes("all-access");
+
+    if (!canViewLOgs) {
+      showAccessDeniedToast();
+      return;
+    }
+    setViewAllLogs(true);
+  };
+
   if (viewAllLogs) {
     return (
       <AuditLogsPage
@@ -159,7 +175,7 @@ export default function ServicesOverviewPage({
         </div>
         <div className="flex flex-col gap-3">
           <button
-            onClick={() => setViewAllLogs(true)}
+            onClick={handleViewLogs}
             className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200"
           >
             View All Logs

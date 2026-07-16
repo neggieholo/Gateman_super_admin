@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { FetchAdminsResponse, sessionResponse } from "./types";
+import {
+  FetchAdminsResponse,
+  FetchNotificationsResponse,
+  sessionResponse,
+} from "./types";
 import { parseISO, formatDistanceToNow } from "date-fns";
 
 // const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
@@ -218,6 +222,7 @@ export const fetchSystemPermissionsApi = async () => {
     const res = await fetch("/api/master/system-permissions", {
       method: "GET",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
     });
 
     const data = await res.json();
@@ -237,6 +242,7 @@ export const fetchCustomRolesApi = async () => {
     const res = await fetch("/api/master/custom-roles", {
       method: "GET",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
     });
     return await res.json();
   } catch (err) {
@@ -262,6 +268,7 @@ export const createCustomRoleApi = async (
         description,
         permission_ids: permissionIds,
       }),
+      credentials: "include",
     });
     return await res.json();
   } catch (err) {
@@ -499,3 +506,64 @@ export async function deleteAdminProfileApi(userId: string) {
     };
   }
 }
+
+export const fetchNotifications =
+  async (): Promise<FetchNotificationsResponse> => {
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "GET",
+        credentials: "include",
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, list: [], lastReadAt: "1970-01-01" };
+    }
+  };
+
+export const markAllAsReadApi = async () => {
+  try {
+    const res = await fetch("/api/notifications/read-all", {
+      method: "PUT",
+      credentials: "include",
+    });
+    return await res.json();
+  } catch (err) {
+    return { success: false };
+  }
+};
+
+export const deleteNotificationApi = async (id: string) => {
+  try {
+    const res = await fetch(`/api/notifications/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+    return await res.json();
+  } catch (err) {
+    console.error("Delete API Error:", err);
+    return { success: false };
+  }
+};
+
+export const deleteAllNotificationsApi = async () => {
+  try {
+    const response = await fetch("/api/notifications/delete-all", {
+      method: "DELETE",
+      // Fix: Ensure this is exactly the string "include"
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Fetch error in deleteAllNotificationsApi:", error);
+    throw error;
+  }
+};

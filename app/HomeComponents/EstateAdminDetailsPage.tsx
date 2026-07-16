@@ -99,6 +99,19 @@ export default function AdminUserDetailsPage({
     setIsWarningOpen(true);
   };
 
+  const handleViewLogs = () => {
+    const canViewLOgs =
+      user?.permissions.includes("logs_management") ||
+      user?.permissions.includes("view_estate_logs") ||
+      user?.permissions.includes("all-access");
+
+    if (!canViewLOgs) {
+      showAccessDeniedToast();
+      return;
+    }
+    setViewLogs(true);
+  };
+
   if (viewLogs) {
     return <AuditLogsPage id={admin.id} onBack={() => setViewLogs(false)} />;
   }
@@ -182,9 +195,7 @@ export default function AdminUserDetailsPage({
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    setViewLogs(true);
-                  }}
+                  onClick={handleViewLogs}
                   disabled={isMutating}
                   className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200`}
                 >
@@ -272,7 +283,7 @@ export default function AdminUserDetailsPage({
 
           {/* ─── NEW ESTATE FINANCIAL & GATEWAY INDEX SECTION ─── */}
           {/* Constrained layout height via explicit max-h container block */}
-          <div className="max-h-64 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-6 pr-1">
+          <div className="max-h-64 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-6 pr-1 mt-4">
             {/* Settlement Account Registry Information */}
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
               <div>

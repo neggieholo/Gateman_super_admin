@@ -2,14 +2,14 @@
 
 import React, { useCallback, useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { DashboardEstateNode, EstatesListRow } from "../services/types";
+import { DashboardEstateNode } from "../services/types";
 import { getEstatesDashboard } from "../services/apis_estates";
 import EstateDashboardPage from "./EstateDashboardPage";
 import { showAccessDeniedToast } from "./ManageUsersPage";
 import { useUser } from "../UserContext";
 
 export default function EstatesManagement() {
-  const { user, setEstatesList } = useUser();
+  const { user } = useUser();
   const [estates, setEstates] = useState<DashboardEstateNode[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEstate, setSelectedEstate] =
@@ -36,7 +36,6 @@ export default function EstatesManagement() {
       const res = await getEstatesDashboard();
       if (res.success) {
         setEstates(res.estates);
-        setEstatesList(res.estatesList);
         setTotalEstates(res.count);
       } else {
         toast.error("Failed to load estates directory metadata.");
@@ -77,7 +76,7 @@ export default function EstatesManagement() {
     currentPermissions.includes("view_estate_info") ||
     currentPermissions.includes("estates_management");
 
-  if(!hasAccessToCurrentPanel){
+  if (!hasAccessToCurrentPanel) {
     return (
       <div className="p-8 text-center text-sm font-semibold text-slate-400 bg-slate-50 rounded-2xl border border-dashed">
         🔒 View locked down due to restricted access.

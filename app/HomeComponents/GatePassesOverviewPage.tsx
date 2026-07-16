@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import { X, History, UserCheck, CalendarDays } from "lucide-react";
 import { Invitation } from "../services/types";
 import AuditLogsPage from "./AuditLogs";
+import { showAccessDeniedToast } from "./ManageUsersPage";
+import { useUser } from "../UserContext";
 
 interface GatePassesOverviewPageProps {
   passes: Invitation[];
@@ -17,6 +19,7 @@ export default function GatePassesOverviewPage({
   estatename,
   onBack,
 }: GatePassesOverviewPageProps) {
+  const { user } = useUser();
   const [passesList, setPassesList] = useState<Invitation[]>(initialPasses);
   const [selectedPass, setSelectedPass] = useState<Invitation | null>(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
@@ -67,6 +70,23 @@ export default function GatePassesOverviewPage({
     if (!days || days.length === 0) return "All Framework Cycles";
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     return days.map((d) => dayNames[d] || d).join(", ");
+  };
+
+  const handleViewLogs = (all: boolean) => {
+    const canViewLOgs =
+      user?.permissions.includes("logs_management") ||
+      user?.permissions.includes("view_estate_logs") ||
+      user?.permissions.includes("all-access");
+
+    if (!canViewLOgs) {
+      showAccessDeniedToast();
+      return;
+    }
+    if (all) {
+      setViewAllLogs(true);
+    } else {
+      setViewIndividualLogs(true);
+    }
   };
 
   if (viewAllLogs) {
@@ -125,7 +145,7 @@ export default function GatePassesOverviewPage({
           </div>
           <div>
             <button
-              onClick={() => setViewAllLogs(true)}
+              onClick={() => handleViewLogs(true)}
               // disabled={isMutating}
               className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200`}
             >
@@ -391,7 +411,7 @@ export default function GatePassesOverviewPage({
 
             <div className="w-full p-3 flex justify-center">
               <button
-                onClick={() => setViewIndividualLogs(true)}
+                onClick={() => handleViewLogs(false)}
                 className="p-1.5 hover:bg-slate-100 rounded-lg border text-slate-500 hover:text-slate-800 transition-all inline-flex items-center gap-1 font-bold text-[14px]"
               >
                 <History size={14} />

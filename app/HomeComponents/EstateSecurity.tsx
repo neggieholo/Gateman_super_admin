@@ -15,6 +15,7 @@ import SecurityActionWarningModal from "./SecurityActionWarningModal";
 import { SecurityUser } from "../services/types";
 import { useUser } from "../UserContext";
 import { showAccessDeniedToast } from "./ManageUsersPage";
+import AuditLogsPage from "./AuditLogs";
 
 interface SecurityPersonnelPageProps {
   estateId?: string;
@@ -49,6 +50,8 @@ export default function SecurityPersonnelPage({
   const [checkOutAddress, setCheckoutAddress] = useState<string>(
     "Loading location...",
   );
+  const [viewAllLogs, setViewAllLogs] = useState(false);
+  const [viewIndividualLogs, setViewIndividualLogs] = useState(false);
 
   // Destructive Action Protection States
   const [actionLoading, setActionLoading] = useState(false);
@@ -264,6 +267,41 @@ export default function SecurityPersonnelPage({
     }
   };
 
+  if (viewAllLogs) {
+    if (all) {
+      return (
+        <AuditLogsPage
+          all={true}
+          name="ALL ESTATES"
+          onBack={() => setViewAllLogs(false)}
+        />
+      );
+    } else {
+      return (
+        <AuditLogsPage
+          estate_id={estateId}
+          name={`${estatename?.toUpperCase() || "UNKNOWN ESTATE"}`}
+          all={true}
+          role="SECURITY"
+          onBack={() => setViewAllLogs(false)}
+        />
+      );
+    }
+  }
+
+  if (viewIndividualLogs) {
+    return (
+      <AuditLogsPage
+        id={selectedGuard?.id}
+        name={selectedGuard?.name.toUpperCase()}
+        onBack={() => {
+          setViewIndividualLogs(false);
+          setSelectedGuard(null);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="p-1 sm:p-6 bg-slate-50 overflow-hidden flex flex-col flex-1 min-h-0 space-y-6">
       {/* Navigation Header Bar */}
@@ -288,7 +326,7 @@ export default function SecurityPersonnelPage({
 
         <div>
           <button
-            onClick={() => console.log("Viewing logs")}
+            onClick={() => setViewAllLogs(true)}
             className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200"
           >
             View Logs History
@@ -466,17 +504,6 @@ export default function SecurityPersonnelPage({
                                 No logged metrics
                               </span>
                             )}
-                            <button
-                              onClick={() =>
-                                console.log(
-                                  `Viewing activity logs for ID: ${guard.id}`,
-                                )
-                              }
-                              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-all inline-flex items-center gap-1 font-bold text-[11px]"
-                            >
-                              <History size={14} />
-                              <span>Logs</span>
-                            </button>
                           </div>
                         </td>
                         <td className="py-3.5 px-4 text-right font-mono text-slate-400 text-[11px]">
@@ -694,6 +721,16 @@ export default function SecurityPersonnelPage({
                     </div>
                   </div>
                 </div> */}
+              </div>
+
+              <div className="w-full p-3 flex justify-center">
+                <button
+                  onClick={() => setViewIndividualLogs(true)}
+                  className="p-1.5 hover:bg-slate-100 rounded-lg border text-slate-500 hover:text-slate-800 transition-all inline-flex items-center gap-1 font-bold text-[14px]"
+                >
+                  <History size={14} />
+                  <span>View Logs</span>
+                </button>
               </div>
 
               {/* ─── ADMINISTRATIVE CONTROL INTERVENTIONS ─── */}

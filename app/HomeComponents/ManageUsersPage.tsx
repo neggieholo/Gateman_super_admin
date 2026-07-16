@@ -157,7 +157,7 @@ export default function ManageUsersPage() {
     const canManageSecurity =
       user?.permissions.includes("users_management") ||
       user?.permissions.includes("modify_users_mfa") ||
-      user?.permissions.includes("all_access");
+      user?.permissions.includes("all-access");
 
     if (!canManageSecurity) {
       showAccessDeniedToast();
@@ -194,7 +194,7 @@ export default function ManageUsersPage() {
     const canToggleStatus =
       user?.permissions.includes("users_management") ||
       user?.permissions.includes("modify_users_mfa") ||
-      user?.permissions.includes("all_access");
+      user?.permissions.includes("all-access");
 
     if (!canToggleStatus) {
       showAccessDeniedToast();
@@ -224,7 +224,7 @@ export default function ManageUsersPage() {
     const canDeleteUser =
       user?.permissions.includes("users_management") ||
       user?.permissions.includes("delete_user") ||
-      user?.permissions.includes("all_access");
+      user?.permissions.includes("all-access");
 
     if (!canDeleteUser) {
       showAccessDeniedToast();

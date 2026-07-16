@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   AuditLogEntry,
+  DashboardAnalyticsPayload,
   EstateDetailsResponse,
   EstatesDirectoryResponse,
   SecurityUser,
@@ -322,6 +323,45 @@ export async function deleteEstateAccount(
     };
   }
 }
+export async function getDashboardAnalytics(): Promise<DashboardAnalyticsPayload> {
+  try {
+    const response = await fetch("/api/master/estates/dashboard-analytics", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(
+      "Failed to retrieve global superadmin analytics telemetry matrix:",
+      error,
+    );
+    return {
+      success: false,
+      superAdminStats: {
+        total: 0,
+        subAccounts: 0,
+        mainAccounts: 0,
+        liveAdmins: 0,
+        pendingRequests: 0,
+      },
+      permissionDistribution: { chartMap: {}, totalAllocatedTokens: 0 },
+      ecosystemStats: {
+        totalEstates: 0,
+        totalResidents: 0,
+        activeResidents30m: 0,
+        totalGuards: 0,
+        activeGuards30m: 0,
+      },
+      estatesList: [],
+      message: "Infrastructure telemetry retrieval lifecycle runtime failure.",
+    };
+  }
+}
 
 export async function fetchSpecifiedLogs(
   id: string,
@@ -400,3 +440,4 @@ export async function fetchSectionLogs(
     return { success: false, data: [] };
   }
 }
+
