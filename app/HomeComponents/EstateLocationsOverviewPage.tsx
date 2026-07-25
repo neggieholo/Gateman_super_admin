@@ -9,11 +9,11 @@ import {
   ExternalLink,
   SlidersHorizontal,
 } from "lucide-react";
-import { EstateLocation } from "../services/types";
+import { EstateFacility } from "../services/types";
 
 
 interface EstateLocationsOverviewPageProps {
-  locations: EstateLocation[];
+  locations: EstateFacility[];
   estatename: string;
   onBack: () => void;
 }
@@ -25,7 +25,7 @@ export default function EstateLocationsOverviewPage({
 }: EstateLocationsOverviewPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLocation, setSelectedLocation] =
-    useState<EstateLocation | null>(null);
+    useState<EstateFacility | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   const metrics = useMemo(() => {
@@ -101,7 +101,7 @@ export default function EstateLocationsOverviewPage({
     });
   }, [locations, searchQuery]);
 
-  const openDetails = (loc: EstateLocation) => {
+  const openDetails = (loc: EstateFacility) => {
     setSelectedLocation(loc);
     setShowDetailModal(true);
   };
@@ -294,7 +294,7 @@ export default function EstateLocationsOverviewPage({
                     </p>
                     <p className="text-xs font-mono font-bold text-slate-900 mt-0.5">
                       {selectedLocation.capacity
-                        ? `${selectedLocation.capacity} seats`
+                        ? `${selectedLocation.capacity} persons`
                         : "Unlimited/Unset"}
                     </p>
                   </div>

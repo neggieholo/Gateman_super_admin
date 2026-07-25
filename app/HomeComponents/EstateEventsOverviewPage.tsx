@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import React, { useState, useMemo, useCallback } from "react";
 import {
   Search,
@@ -10,42 +9,45 @@ import {
   AlertCircle,
   HelpCircle,
   MapPin,
-  Image as ImageIcon,
+  CreditCard,
+  Clock,
 } from "lucide-react";
-import { EstateEvent, EstateLocation } from "../services/types";
+import { LocationBooking, EstateFacility } from "../services/types";
 import { formatDate, formatTime } from "../services/apis";
 
-interface EstateEventsOverviewPageProps {
-  events: EstateEvent[];
-  locations: EstateLocation[];
+interface LocationBookingsOverviewPageProps {
+  events: LocationBooking[];
+  locations: EstateFacility[];
   estatename: string;
   onBack: () => void;
 }
 
-type StatusFilter = "ALL" | "APPROVED" | "REJECTED" | "PENDING";
+type StatusFilter =
+  | "ALL"
+  | "APPROVED"
+  | "REJECTED"
+  | "PENDING"
+  | "PAYMENT PENDING"
+  | "PAYMENT SUBMITTED";
 
-export default function EstateEventsOverviewPage({
+export default function LocationBookingsOverviewPage({
   events = [],
   locations = [],
   estatename,
   onBack,
-}: EstateEventsOverviewPageProps) {
+}: LocationBookingsOverviewPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
-  const [selectedEvent, setSelectedEvent] = useState<EstateEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<LocationBooking | null>(
+    null,
+  );
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   // 🔄 Memoized location index map handling numeric IDs and unique Name strings safely
   const locationsMap = useMemo(() => {
-    const maps: { [key: string]: EstateLocation } = {};
+    const maps: { [key: string]: EstateFacility } = {};
 
     locations.forEach((loc) => {
-      // 1. Map by Unique Name string (Your new implementation)
-      if (loc.name) {
-        maps[loc.name.trim().toLowerCase()] = loc;
-      }
-
-      // 2. Map by Numeric ID casted safely to string (For backwards compatibility/fallback matching)
       if (loc.id !== undefined && loc.id !== null) {
         const stringId = String(loc.id).trim().toLowerCase();
         maps[stringId] = loc;
@@ -56,9 +58,9 @@ export default function EstateEventsOverviewPage({
   }, [locations]);
 
   const resolveLocationInfo = useCallback(
-    (venueDetail: string | null): EstateLocation | null => {
-      if (!venueDetail) return null;
-      const normalizedKey = venueDetail.trim().toLowerCase();
+    (venueId: string | null): EstateFacility | null => {
+      if (!venueId) return null;
+      const normalizedKey = venueId.toString();
       return locationsMap[normalizedKey] || null;
     },
     [locationsMap],
@@ -68,60 +70,76 @@ export default function EstateEventsOverviewPage({
     return events.filter((ev) => {
       const searchLower = searchQuery.toLowerCase();
 
-      const resolvedLocationName =
-        resolveLocationInfo(ev.venue_detail)?.name.toLowerCase() || "";
+      const resolvedLocationName = ev.venue_name;
 
       const matchesText =
-        ev.title.toLowerCase().includes(searchLower) ||
-        ev.ref_code.toLowerCase().includes(searchLower) ||
-        (ev.venue_detail || "").toLowerCase().includes(searchLower) ||
-        resolvedLocationName.includes(searchLower); 
+        ev.resident_name?.toLowerCase().includes(searchLower) ||
+        resolvedLocationName.includes(searchLower);
 
       // 3. Status Matrix Routing
       let matchesStatus = true;
-      if (statusFilter === "APPROVED") matchesStatus = ev.is_approved === true;
+      if (statusFilter === "APPROVED") matchesStatus = ev.status === "APPROVED";
       else if (statusFilter === "REJECTED")
-        matchesStatus = ev.is_rejected === true;
+        matchesStatus = ev.status === "REJECTED";
       else if (statusFilter === "PENDING") {
-        matchesStatus = ev.is_approved !== true && ev.is_rejected !== true;
+        matchesStatus = ev.status === "PENDING_APPROVAL";
+      } else if (statusFilter === "PAYMENT PENDING") {
+        matchesStatus = ev.status === "PAYMENT_PENDING";
+      } else if (statusFilter === "PAYMENT SUBMITTED") {
+        matchesStatus = ev.status === "PAYMENT_SUBMITTED";
       }
 
       return matchesText && matchesStatus;
     });
-  }, [events, searchQuery, statusFilter, resolveLocationInfo]);
+  }, [events, searchQuery, statusFilter]);
 
-  const renderStatusBadge = (
-    approved: boolean | null,
-    rejected: boolean | null,
-  ) => {
-    if (approved === true) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <CheckCircle size={10} /> APPROVED
-        </span>
-      );
+  const renderStatusBadge = (event: LocationBooking) => {
+    switch (event.status) {
+      case "APPROVED":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <CheckCircle size={10} /> APPROVED
+          </span>
+        );
+
+      case "REJECTED":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200">
+            <AlertCircle size={10} /> REJECTED
+          </span>
+        );
+
+      case "PAYMENT_PENDING":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-sky-50 text-sky-700 border border-sky-200">
+            <CreditCard size={10} /> PAYMENT PENDING
+          </span>
+        );
+
+      case "PAYMENT_SUBMITTED":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <Clock size={10} /> PAYMENT SUBMITTED
+          </span>
+        );
+
+      case "PENDING_APPROVAL":
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200">
+            <HelpCircle size={10} /> PENDING
+          </span>
+        );
     }
-    if (rejected === true) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200">
-          <AlertCircle size={10} /> REJECTED
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200">
-        <HelpCircle size={10} /> PENDING
-      </span>
-    );
   };
 
-  const openDetails = (ev: EstateEvent) => {
+  const openDetails = (ev: LocationBooking) => {
     setSelectedEvent(ev);
     setShowDetailModal(true);
   };
 
   const activeSelectedLocation = selectedEvent
-    ? resolveLocationInfo(selectedEvent.venue_detail)
+    ? resolveLocationInfo(selectedEvent.venue_id)
     : null;
 
   return (
@@ -171,7 +189,7 @@ export default function EstateEventsOverviewPage({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 pt-1">
-          {(["ALL", "APPROVED", "PENDING", "REJECTED"] as StatusFilter[]).map(
+          {(["ALL", "PENDING", "PAYMENT PENDING", "PAYMENT SUBMITTED", "APPROVED", "REJECTED"] as StatusFilter[]).map(
             (tab) => (
               <button
                 key={tab}
@@ -215,7 +233,7 @@ export default function EstateEventsOverviewPage({
                 </tr>
               ) : (
                 filteredEvents.map((ev) => {
-                  const resolvedLocation = resolveLocationInfo(ev.venue_detail);
+                  const resolvedLocation = resolveLocationInfo(ev.venue_id);
                   return (
                     <tr
                       key={ev.id}
@@ -224,17 +242,15 @@ export default function EstateEventsOverviewPage({
                       <td className="p-4">
                         <div className="space-y-0.5">
                           <p className="font-bold text-slate-900 truncate">
-                            {ev.title}
-                          </p>
-                          <p className="font-mono text-[10px] text-slate-400 uppercase tracking-tight">
-                            {ev.ref_code}
+                            {ev.venue_name}
                           </p>
                         </div>
                       </td>
                       <td className="p-4 text-slate-600 space-y-0.5">
                         <p className="font-mono font-bold text-slate-800 text-[11px]">
                           {formatDate(ev.start_date)}{" "}
-                          {ev.end_date !== ev.start_date && `to ${formatDate(ev.end_date)}`}
+                          {ev.end_date !== ev.start_date &&
+                            `to ${formatDate(ev.end_date)}`}
                         </p>
                         <p className="text-slate-400 text-[10px]">
                           {ev.start_time.slice(0, 5)} -{" "}
@@ -250,13 +266,11 @@ export default function EstateEventsOverviewPage({
                             />
                             {resolvedLocation
                               ? resolvedLocation.name
-                              : ev.venue_detail || "No assignment"}
+                              : ev.venue_id || "No assignment"}
                           </p>
                         </div>
                       </td>
-                      <td className="p-4">
-                        {renderStatusBadge(ev.is_approved, ev.is_rejected)}
-                      </td>
+                      <td className="p-4">{renderStatusBadge(ev)}</td>
                       <td className="p-4">
                         <button
                           onClick={() => openDetails(ev)}
@@ -288,9 +302,6 @@ export default function EstateEventsOverviewPage({
                 <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">
                   Event Info
                 </h2>
-                <p className="text-sm font-black text-slate-900 mt-0.5">
-                  {selectedEvent.title}
-                </p>
               </div>
               <button
                 onClick={() => setShowDetailModal(false)}
@@ -302,54 +313,18 @@ export default function EstateEventsOverviewPage({
 
             {/* Scrollable Container Body Frame */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0 bg-slate-50/30">
-              {/* Event Graphic Banner Display Frame */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                  Event Banner
+              <div className="flex items-center justify-between bg-white p-3.5 rounded-xl border border-slate-100 shadow-sm font-oswald">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                  Resident Name
                 </span>
-                {selectedEvent.banner_url ? (
-                  <div className="relative w-full h-44 rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 shadow-sm group">
-                    <img
-                      src={selectedEvent.banner_url}
-                      alt="Program Banner"
-                      className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = "none";
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full h-24 rounded-2xl border border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-1 text-slate-400">
-                    <ImageIcon size={20} className="stroke-[1.5]" />
-                    <span className="text-[10px] font-bold uppercase tracking-wide">
-                      No Banner Media Attached
-                    </span>
-                  </div>
-                )}
+                {selectedEvent.resident_name}
               </div>
-
-              {/* Status Verification Bar */}
               <div className="flex items-center justify-between bg-white p-3.5 rounded-xl border border-slate-100 shadow-sm">
                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
                   Verification State
                 </span>
-                {renderStatusBadge(
-                  selectedEvent.is_approved,
-                  selectedEvent.is_rejected,
-                )}
+                {renderStatusBadge(selectedEvent)}
               </div>
-
-              {/* Program Descriptions Text Box */}
-              {selectedEvent.description && (
-                <div className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                    Program Description Summary
-                  </span>
-                  <p className="text-xs text-slate-600 bg-white p-3.5 rounded-xl border border-slate-100 shadow-sm leading-relaxed">
-                    {selectedEvent.description}
-                  </p>
-                </div>
-              )}
 
               {/* Location Framework Info & Venue Capacity Block */}
               <div className="space-y-1.5">
@@ -388,33 +363,10 @@ export default function EstateEventsOverviewPage({
                   <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm space-y-1">
                     <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
                       <MapPin size={13} className="text-slate-400 shrink-0" />
-                      {selectedEvent.venue_detail ||
-                        "No LOcation Recorded"}
+                      {selectedEvent.venue_name || "No LOcation Recorded"}
                     </div>
                   </div>
                 )}
-              </div>
-
-              {/* Attendance Registry Comparison Matrix */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-sm space-y-0.5">
-                  <p className="text-[9px] font-black uppercase text-slate-400 tracking-wide flex items-center gap-1">
-                    <Users size={12} className="text-slate-400" /> Expected
-                    Number
-                  </p>
-                  <p className="text-base font-mono font-black text-slate-800">
-                    {selectedEvent.expected_guests || 0}
-                  </p>
-                </div>
-                <div className="bg-indigo-600 p-3.5 rounded-xl space-y-0.5 shadow-sm text-white">
-                  <p className="text-[9px] font-black uppercase text-indigo-200 tracking-wide flex items-center gap-1">
-                    <Users size={12} className="text-indigo-200" /> Registered
-                    Guests
-                  </p>
-                  <p className="text-base font-mono font-black">
-                    {selectedEvent.registered_guests || 0}
-                  </p>
-                </div>
               </div>
 
               {/* Operation Time & Booked Dates Calendar */}
@@ -455,7 +407,7 @@ export default function EstateEventsOverviewPage({
                             key={idx}
                             className="bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[10px] px-2 py-0.5 rounded-md"
                           >
-                            {date}
+                            {formatDate(date)}
                           </span>
                         ))}
                       </div>
@@ -476,50 +428,21 @@ export default function EstateEventsOverviewPage({
                     <span
                       className={`font-bold inline-block px-2 py-px mt-0.5 rounded text-[10px] ${selectedEvent.is_paid ? "bg-amber-50 text-amber-700 border border-amber-200" : "bg-slate-100 text-slate-600"}`}
                     >
-                      {selectedEvent.is_paid ? "PAID ENTRANCE" : "FREE ENTRY"}
+                      {selectedEvent.is_paid ? "PAID" : "FREE"} BOOKING
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[10px]">
-                      Ticket Cost
+                      Charged Amount
                     </span>
                     <span className="font-mono font-bold text-slate-800">
                       ₦
                       {parseFloat(
-                        (selectedEvent.ticket_price as string) || "0",
+                        (selectedEvent.total_amount).toString() || "0",
                       ).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
-
-                {selectedEvent.is_paid && selectedEvent.account_number && (
-                  <div className="pt-3 border-t border-slate-100 text-xs grid grid-cols-2 gap-2">
-                    <div className="col-span-2">
-                      <span className="text-slate-400 block text-[10px]">
-                        Flutterwave Split Subaccount ID
-                      </span>
-                      <span className="font-mono font-semibold text-slate-700">
-                        {selectedEvent.subaccount_id || "Direct Ledger Account"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[10px]">
-                        Payout Target Bank
-                      </span>
-                      <span className="font-bold text-slate-800">
-                        {selectedEvent.bank_name || "N/A"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[10px]">
-                        NUBAN Settlement Account
-                      </span>
-                      <span className="font-mono font-bold text-slate-800">
-                        {selectedEvent.account_number}
-                      </span>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 

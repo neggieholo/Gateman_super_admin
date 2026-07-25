@@ -11,6 +11,7 @@ import {
   Building2,
   Contact2,
   ShieldAlert,
+  DollarSign,
 } from "lucide-react";
 import { ViewState } from "../services/types";
 import { useUser } from "../UserContext";
@@ -93,6 +94,15 @@ export default function SideBar({
     },
   ];
 
+  const financeNavItems = [
+    {
+      id: ViewState.BILLING,
+      label: "Revenue & Subscriptions",
+      icon: DollarSign,
+      url: "/home/estates",
+    },
+  ];
+
   const getRoleBadgeColor = () => {
     return "bg-emerald-100 text-emerald-700 border border-emerald-200";
   };
@@ -164,6 +174,16 @@ export default function SideBar({
               </label>
             </div>
             {estateNavItems.map(renderNavButton)}
+          </div>
+
+          <div className="space-y-1 pt-2">
+            <div className="px-4 mb-2 flex items-center gap-1.5">
+              <span className="w-1 h-3 rounded-full bg-indigo-500/80" />
+              <label className="text-[9px] text-white/40 font-black uppercase tracking-widest block">
+                Finance & Billing
+              </label>
+            </div>
+            {financeNavItems.map(renderNavButton)}
           </div>
         </div>
 

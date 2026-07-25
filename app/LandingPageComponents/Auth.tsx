@@ -59,10 +59,10 @@ export default function Auth() {
 
       try {
         const res = await checkSession();
-        if (res.success) {
+        if (res.success && res?.user?.role == "SUPER_ADMIN") {
           setUser(res.user);
           window.location.replace("/home/dashboard");
-        } else {
+        } else if (!res.success || res?.user?.role !== "SUPER_ADMIN") {
           setSessionLoading(false);
         }
       } catch (err) {
@@ -87,7 +87,7 @@ export default function Auth() {
   const handleRequestOtp = async () => {
     const trimmedEmail = email.trim();
     if (!validateEmail(trimmedEmail)) {
-      alert("Invalid Email. Check your email format.");
+      toast.error("Invalid Email. Check your email format.");
       setLoading(false);
       return;
     }
@@ -168,7 +168,7 @@ export default function Auth() {
           "Browser environment does not support geolocation metrics.",
         );
       }
-      const response = await fetch("/api/master/verify-otp-only", {
+      const response = await fetch("/api/master/verify-login-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -177,7 +177,7 @@ export default function Auth() {
           type: mfaType === "TOTP" ? "totp" : "email",
           metadata: mfaType === "EMAIL" ? metadata : undefined,
           rememberMe: rememberMe,
-          coordinates
+          coordinates,
         }),
       });
 
@@ -248,7 +248,7 @@ export default function Auth() {
               latitude: position.coords.latitude,
               longitude: position.coords.longitude,
             };
-          } catch (geoError:any) {
+          } catch (geoError: any) {
             if (geoError.code === geoError.PERMISSION_DENIED) {
               setError(
                 "Access Denied: Administrative security policy requires location verification.",
@@ -267,7 +267,6 @@ export default function Auth() {
           );
         }
 
-        
         const data = await db.authenticate(
           email,
           password,
@@ -308,7 +307,7 @@ export default function Auth() {
               </div>
             ),
             {
-              duration: Infinity, 
+              duration: Infinity,
               position: "top-center",
             },
           );
@@ -325,8 +324,9 @@ export default function Auth() {
                   Administrative Account Lock
                 </p>
                 <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                  An administrative block has been triggered due to failure to set MFA. Please contact the{" "}
-                  <strong>System Registrar</strong> to reslove the issue.
+                  An administrative block has been triggered due to failure to
+                  set MFA. Please contact the <strong>System Registrar</strong>{" "}
+                  to reslove the issue.
                 </p>
                 <div className="flex justify-end mt-1">
                   <button
@@ -346,7 +346,7 @@ export default function Auth() {
           return;
         }
 
-        if (data.success && data.user && !data.user.email_verfied) {
+        if (data.success && data.user && !data.user.email_verified) {
           setUser(data.user);
           setMfaType("EMAIL");
           setLoading(false);
@@ -700,7 +700,7 @@ export default function Auth() {
                   value={digit}
                   onChange={(e) => handleOtpChange(e.target.value, index)}
                   onKeyDown={(e) => handleKeyDown(e, index)}
-                  className="w-12 h-14 text-center text-2xl font-bold bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all outline-none"
+                  className="w-12 h-14 text-center text-2xl text-black font-bold bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all outline-none"
                 />
               ))}
             </div>

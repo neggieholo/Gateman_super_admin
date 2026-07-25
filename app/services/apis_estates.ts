@@ -1,10 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   AuditLogEntry,
+  BillingAnalyticsResponse,
   DashboardAnalyticsPayload,
   EstateDetailsResponse,
   EstatesDirectoryResponse,
+  ExtensionResponse,
   SecurityUser,
+  SubscriptionPricing,
+  SubscriptionsResponse,
+  UpdatePricingResponse,
 } from "./types";
 
 export async function getEstatesDashboard(): Promise<EstatesDirectoryResponse> {
@@ -404,7 +409,10 @@ export async function fetchAllLogs(
   }
 }
 
-export async function fetchUniversalLogs(): Promise<{ success: boolean; data: AuditLogEntry[] }> {
+export async function fetchUniversalLogs(): Promise<{
+  success: boolean;
+  data: AuditLogEntry[];
+}> {
   try {
     const response = await fetch("/api/master/estates/overall-audit-logs", {
       method: "POST",
@@ -422,7 +430,7 @@ export async function fetchUniversalLogs(): Promise<{ success: boolean; data: Au
 }
 
 export async function fetchSectionLogs(
-  estate_id: string
+  estate_id: string,
 ): Promise<{ success: boolean; data: AuditLogEntry[] }> {
   try {
     const response = await fetch("/api/master/estates/section-audit-logs", {
@@ -441,3 +449,111 @@ export async function fetchSectionLogs(
   }
 }
 
+export const billingApi = {
+  // ─── 1. FETCH AGGREGATED BILLING ANALYTICS & PRICING ───
+  getAnalytics: async (): Promise<BillingAnalyticsResponse> => {
+    try {
+      const res = await fetch("/api/billing/analytics", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const data: BillingAnalyticsResponse = await res.json();
+      console.log("Received billing analytics telemetry:", data);
+      return data;
+    } catch (error) {
+      console.error("getAnalytics Error:", error);
+      throw error;
+    }
+  },
+
+  // ─── 2. FETCH ALL ESTATE SUBSCRIPTIONS & LEDGER ───
+  getSubscriptions: async (): Promise<SubscriptionsResponse> => {
+    try {
+      const res = await fetch("/api/billing/subscriptions", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const data: SubscriptionsResponse = await res.json();
+      console.log("Received estate subscriptions ledger dataset:", data);
+      return data;
+    } catch (error) {
+      console.error("getSubscriptions Error:", error);
+      throw error;
+    }
+  },
+
+  // ─── 3. UPDATE GLOBAL SUBSCRIPTION PRICING MATRIX ───
+  updatePricingConfig: async (
+    pricing: SubscriptionPricing,
+  ): Promise<UpdatePricingResponse> => {
+    try {
+      const res = await fetch("/api/billing/pricing-config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(pricing),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(
+          errorData.message || `HTTP error! status: ${res.status}`,
+        );
+      }
+
+      const data: UpdatePricingResponse = await res.json();
+      console.log("Successfully updated global plan pricing matrix:", data);
+      return data;
+    } catch (error) {
+      console.error("updatePricingConfig Error:", error);
+      throw error;
+    }
+  },
+
+  // ─── 4. MANUAL SUBSCRIPTION EXTENSION / RENEWAL ───
+  extendSubscription: async (
+    estateId: string,
+    durationMonths: number,
+  ): Promise<ExtensionResponse> => {
+    try {
+      const res = await fetch("/api/billing/manual-renew", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          estate_id: estateId,
+          duration_months: durationMonths,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(
+          errorData.message || `HTTP error! status: ${res.status}`,
+        );
+      }
+
+      const data: ExtensionResponse = await res.json();
+      console.log(
+        `Successfully extended subscription for estate [${estateId}]:`,
+        data,
+      );
+      return data;
+    } catch (error) {
+      console.error("extendSubscription Error:", error);
+      throw error;
+    }
+  },
+};

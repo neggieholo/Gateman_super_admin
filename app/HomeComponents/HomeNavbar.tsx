@@ -18,8 +18,9 @@ const HomeNavbar = () => {
         setMounted(true);
         setIsLoading(true);
         const res = await checkSession();
+        console.log('Session check data:', res)
 
-        if (!res.success) {
+        if (!res.success || res?.user?.role !== 'SUPER_ADMIN') {
           console.warn("Session invalid, redirecting...");
           window.location.replace("/");
         } else {
@@ -84,7 +85,7 @@ const HomeNavbar = () => {
           </div> */}
 
           <button
-            className="btn btn-ghost btn-circle bg-slate-50 hover:bg-secondary/10 hover:text-secondary transition-all duration-300 shadow-sm border mx-4 border-slate-100"
+            className="btn btn-ghost btn-circle bg-gm-charcoal/40 hover:bg-secondary/10 hover:text-secondary transition-all duration-300 shadow-sm border mx-4 border-slate-100"
             onClick={() => router.push("/home/settings")}
           >
             <svg

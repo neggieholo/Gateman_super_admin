@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from "react";
 import { AdminUser, EstateDetailedContext } from "../services/types";
-import { deleteEstateAccount, getEstateDetailsContext, updateEstateStatus } from "../services/apis_estates";
+import {
+  deleteEstateAccount,
+  getEstateDetailsContext,
+  updateEstateStatus,
+} from "../services/apis_estates";
 import { useGatePassMetrics } from "../hooks/useGatePassMetrics";
 import { getRelativeTime } from "../services/apis";
 import AdminUserDetailsPage from "./EstateAdminDetailsPage";
@@ -18,6 +22,7 @@ import { showAccessDeniedToast } from "./ManageUsersPage";
 import toast from "react-hot-toast";
 import ResidentsOverviewPage from "./EstateResidents";
 import SecurityPersonnelPage from "./EstateSecurity";
+import { AdminListModal } from "./AdminListModal";
 
 interface EstateDashboardPageProps {
   estateId: string;
@@ -28,7 +33,7 @@ export default function EstateDashboardPage({
   estateId,
   onBack,
 }: EstateDashboardPageProps) {
-  const {user} = useUser();
+  const { user } = useUser();
   const [selectedEstate, setSelectedEstate] =
     useState<EstateDetailedContext | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -48,6 +53,8 @@ export default function EstateDashboardPage({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [residentsSelected, setResidentsSelected] = useState<boolean>(false);
   const [securitySelected, setSecuritySelected] = useState<boolean>(false);
+  const [adminListModalOpen, setIsAdminListModalOpen] =
+    useState<boolean>(false);
   const savedScrollPositions = useRef<{ [key: string]: number }>({
     metrics: 0,
     charts: 0,
@@ -120,8 +127,9 @@ export default function EstateDashboardPage({
   ) => {
     setWarningConfig({
       title: "Purge Admin Account Vector",
-      message: `CRITICAL SUSPEND CHALLENGE: Are you completely certain you want to ${targetStatus === 'SUSPENDED' ?'suspend':'reactivate'} "${estate_name}'s" account?`,
-      confirmText: targetStatus==='SUSPENDED'? 'Suspend Account' : 'Activate Account',
+      message: `CRITICAL SUSPEND CHALLENGE: Are you completely certain you want to ${targetStatus === "SUSPENDED" ? "suspend" : "reactivate"} "${estate_name}'s" account?`,
+      confirmText:
+        targetStatus === "SUSPENDED" ? "Suspend Account" : "Activate Account",
       variant: "warning",
       onConfirm: async () => {
         await handleToggleEstateStatus(estateId, targetStatus);
@@ -129,7 +137,7 @@ export default function EstateDashboardPage({
     });
     setIsWarningOpen(true);
   };
-  
+
   const triggerEstateDeleteWarning = (
     estateId: string,
     estate_name: string,
@@ -206,16 +214,14 @@ export default function EstateDashboardPage({
 
       return {
         ...prevEstate,
-        admin: prevEstate.admin
-          ? { ...prevEstate.admin, status: nextStatus }
-          : prevEstate.admin,
+        admins: prevEstate.admins
+          ? { ...prevEstate.admins, status: nextStatus }
+          : prevEstate.admins,
       };
     });
   };
 
-  const handleEstateStatusUpdate = (
-    nextStatus: "ACTIVE" | "SUSPENDED",
-  ) => {
+  const handleEstateStatusUpdate = (nextStatus: "ACTIVE" | "SUSPENDED") => {
     setSelectedEstate((prevEstate) => {
       if (!prevEstate) return null;
 
@@ -226,7 +232,6 @@ export default function EstateDashboardPage({
     });
   };
 
-  
   const handleDeleteEstateAccount = async (id: string) => {
     const canDeleteEstate =
       user?.permissions.includes("estates_management") ||
@@ -350,41 +355,30 @@ export default function EstateDashboardPage({
 
   // 📅 COMPILING SCHEDULED ESTATE EVENTS & TICKET REVENUE PIPELINE
   const eventMetrics = {
-    total: selectedEstate?.events?.length || 0,
-    paidEvents: 0,
-    totalRevenueTransacted: 0,
+    total: selectedEstate?.bookings?.length || 0,
+    pending: 0,
+    payment_pending: 0,
+    payment_submitted: 0,
     approved: 0,
     rejected: 0,
-    totalExpectedGuests: 0,
-    totalRegisteredGuests: 0,
+    paidBookings: 0,
+    totalRevenueTransacted: 0,
   };
 
-  selectedEstate?.events?.forEach((ev: any) => {
-    if (ev.is_approved === true) eventMetrics.approved++;
-    if (ev.is_rejected === true) eventMetrics.rejected++;
-
-    eventMetrics.totalExpectedGuests += parseInt(
-      ev.expected_guests || ev._expected_guests || 0,
-      10,
-    );
-    eventMetrics.totalRegisteredGuests += parseInt(
-      ev.registered_guests || 0,
-      10,
-    );
-
-    if (ev.is_paid === true) {
-      eventMetrics.paidEvents++;
-      const guestsCount = parseInt(ev.registered_guests || 0, 10);
-      const ticketPrice = parseFloat(ev.ticket_price || 0);
-      eventMetrics.totalRevenueTransacted += guestsCount * ticketPrice;
-    }
+  selectedEstate?.bookings?.forEach((ev: any) => {
+    if (ev.status === "PENDING_APPROVAL") eventMetrics.pending++;
+    if (ev.status === "PAYMENT_PENDING") eventMetrics.payment_pending++;
+    if (ev.status === "PAYMENT_SUBMITTED") eventMetrics.payment_submitted++;
+    if (ev.status === "REJECTED") eventMetrics.rejected++;
+    if (ev.status === "REJECTED") eventMetrics.rejected++;
+    if (ev.isPaid) eventMetrics.paidBookings++;
+    eventMetrics.totalRevenueTransacted += ev.total_amount;
   });
 
   const getPercentage = (value: number, total: number) => {
     if (!total || total === 0) return "0%";
     return `${Math.min(100, Math.round((value / total) * 100))}%`;
   };
-
 
   const estateResdentsOrSecurity = (type: "resident" | "security") => {
     if (type === "resident") {
@@ -507,7 +501,7 @@ export default function EstateDashboardPage({
   if (eventsSelected) {
     return (
       <EstateEventsOverviewPage
-        events={selectedEstate.events}
+        events={selectedEstate.bookings}
         estatename={selectedEstate.name}
         locations={selectedEstate.locations}
         onBack={() => setEventsSelected(false)}
@@ -948,23 +942,21 @@ export default function EstateDashboardPage({
                     <div>
                       <div className="flex justify-between items-center text-xs mb-1">
                         <span className="font-bold text-slate-700">
-                          Guest Invitation Capacity Fill-Rate
+                          Booking Approval Rate
                         </span>
                         <span className="font-mono font-medium text-slate-500">
-                          {eventMetrics.totalRegisteredGuests} Registered /{" "}
-                          {eventMetrics.totalExpectedGuests} Invited
+                          {eventMetrics.approved} Approved /{" "}
+                          {eventMetrics.total} Total
                         </span>
                       </div>
-                      <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
-                        <div
-                          className="bg-indigo-600 h-full transition-all"
-                          style={{
-                            width: getPercentage(
-                              eventMetrics.totalRegisteredGuests,
-                              eventMetrics.totalExpectedGuests,
-                            ),
-                          }}
-                        ></div>
+                      <div className="flex justify-between items-center text-xs mb-1">
+                        <span className="font-bold text-slate-700">
+                          Booking Rejection Rate
+                        </span>
+                        <span className="font-mono font-medium text-slate-500">
+                          {eventMetrics.rejected} Rejected /{" "}
+                          {eventMetrics.total} Total
+                        </span>
                       </div>
                     </div>
 
@@ -972,7 +964,7 @@ export default function EstateDashboardPage({
                     <div className="grid grid-cols-2 gap-4 pt-2">
                       <div className="p-3 bg-emerald-50/50 border border-emerald-100 rounded-xl">
                         <p className="text-[9px] font-bold text-emerald-600 uppercase">
-                          Approved Event Logs
+                          Booking Rejection Rate
                         </p>
                         <div className="flex justify-between items-baseline mt-1">
                           <span className="text-xl font-black text-emerald-800 font-mono">
@@ -1014,7 +1006,7 @@ export default function EstateDashboardPage({
                       Ticketing Monetization Flow
                     </p>
                     <p className="text-sm font-black mt-0.5">
-                      {eventMetrics.paidEvents} Paid Tier Programs
+                      {eventMetrics.paidBookings} Paid Tier Programs
                     </p>
                   </div>
                   <div className="text-right">
@@ -1083,51 +1075,129 @@ export default function EstateDashboardPage({
 
             {/* ─── ROW 1: ADMINISTRATORS & ACCESS GATES PASSES ─── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
                 <div>
                   <div className="flex justify-between items-start border-b border-slate-100 pb-3 mb-4">
                     <div>
                       <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                        Estate Administrator
+                        Estate Administrators
                       </h3>
                       <p className="text-[11px] text-slate-400">
-                        Personnel in charge of Estate management
+                        Personnels in charge of Estate management
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-3xl font-black text-slate-900 font-mono">
+                        {selectedEstate.admins?.length || 0}
+                      </p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                        Total Admins
                       </p>
                     </div>
                   </div>
-                  <div className="space-y-2 max-h-40 overflow-y-auto mb-4">
-                    {!selectedEstate.admin ? (
+                  <div className="space-y-2 max-h-40 mb-4">
+                    {!selectedEstate.admins ||
+                    selectedEstate.admins.length === 0 ? (
                       <p className="text-xs text-slate-400 p-2 italic">
-                        No administrator provisioned.
+                        No administrators provisioned.
                       </p>
                     ) : (
-                      <div className="bg-slate-50 p-2 rounded-xl flex justify-between items-center text-sm">
-                        <span className="font-bold text-slate-800">
-                          {selectedEstate.admin.name ||
-                            selectedEstate.admin.email}
-                        </span>
-                        <span className="text-[10px] bg-slate-200/70 px-2 py-0.5 rounded text-slate-600 font-medium">
-                          {selectedEstate.admin.role || "ADMIN"}
-                        </span>
+                      <div className="space-y-4 mb-4">
+                        <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl">
+                          {(() => {
+                            // Find the root admin object from the admins array
+                            const rootAdmin = (
+                              selectedEstate.admins || []
+                            ).find(
+                              (a: AdminUser) =>
+                                a.email === selectedEstate.root_admin_email,
+                            );
+
+                            return (
+                              <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                {rootAdmin ? (
+                                  <>
+                                    {/* Circular Badge with Root Admin's Initial */}
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white font-bold text-xs ring-2 ring-white shadow-sm flex-shrink-0">
+                                      {rootAdmin.name
+                                        ? rootAdmin.name.charAt(0).toUpperCase()
+                                        : "R"}
+                                    </div>
+
+                                    {/* Root Admin Name and Email Details */}
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-xs font-bold text-slate-800 truncate">
+                                          {rootAdmin.name}
+                                        </p>
+                                        <span className="text-[9px] font-black bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded uppercase">
+                                          Root
+                                        </span>
+                                      </div>
+                                      <p className="text-[11px] text-slate-400 truncate">
+                                        {rootAdmin.email}
+                                      </p>
+                                    </div>
+                                  </>
+                                ) : (
+                                  /* Fallback if root admin isn't found in array */
+                                  <div className="text-xs text-slate-400 font-medium py-1">
+                                    Root Admin:{" "}
+                                    {selectedEstate.root_admin_email ||
+                                      "Not designated"}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Status Metrics Grid */}
+                        <div className="grid grid-cols-2 gap-2 text-center">
+                          <div className="bg-emerald-50/60 p-2 rounded-xl border border-emerald-100/50">
+                            <p className="text-[9px] font-black text-emerald-600 uppercase">
+                              Active
+                            </p>
+                            <p className="text-sm font-black text-emerald-700 font-mono">
+                              {
+                                selectedEstate.admins.filter(
+                                  (a: AdminUser) => a.status === "ACTIVE",
+                                ).length
+                              }
+                            </p>
+                          </div>
+                          <div className="bg-rose-50/60 p-2 rounded-xl border border-rose-100/50">
+                            <p className="text-[9px] font-black text-rose-600 uppercase">
+                              Suspended
+                            </p>
+                            <p className="text-sm font-black text-rose-700 font-mono">
+                              {
+                                selectedEstate.admins.filter(
+                                  (a: AdminUser) => a.status === "SUSPENDED",
+                                ).length
+                              }
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     )}
-                  </div>
-                  <div className="flex flex-col">
-                    <p className="text-[14px] text-slate-400">Active Last</p>
-                    <span className="text-[12px] bg-slate-200/70 px-2 py-0.5 rounded text-slate-600 font-medium">
-                      {getRelativeTime(selectedEstate.admin.last_activity_at)}
-                    </span>
                   </div>
                 </div>
                 <button
                   onClick={() => {
-                    if (selectedEstate.admin) {
-                      setSelectedAdmin(selectedEstate.admin);
+                    if (
+                      selectedEstate.admins &&
+                      selectedEstate.admins.length > 0
+                    ) {
+                      setIsAdminListModalOpen(true);
                     }
                   }}
-                  className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors"
+                  disabled={
+                    !selectedEstate.admins || selectedEstate.admins.length === 0
+                  }
+                  className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 disabled:opacity-50 border border-slate-100 rounded-xl text-xs font-bold text-indigo-600 transition-colors mt-2"
                 >
-                  See Details →
+                  See All Administrators →
                 </button>
               </div>
 
@@ -1552,11 +1622,10 @@ export default function EstateDashboardPage({
                   <div className="flex justify-between items-start border-b border-slate-100 pb-3 mb-4">
                     <div>
                       <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                        Scheduled Public Events
+                        Scheduled Facilty Bookings
                       </h3>
                       <p className="text-[11px] text-slate-400">
-                        Town halls, gate bookings, and ticketing revenue
-                        pipeline.
+                        Town halls or location bookings,.
                       </p>
                     </div>
                     <div className="text-right">
@@ -1573,36 +1642,51 @@ export default function EstateDashboardPage({
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-slate-50 p-2 rounded-xl text-center border border-slate-100">
                         <p className="text-[9px] font-bold text-slate-400 uppercase">
-                          Invited (Expected)
+                          Total Bookings
                         </p>
                         <p className="text-base font-black text-slate-800 font-mono mt-0.5">
-                          {eventMetrics.totalExpectedGuests}
-                        </p>
-                      </div>
-                      <div className="bg-indigo-50/60 p-2 rounded-xl text-center border border-indigo-100/40">
-                        <p className="text-[9px] font-bold text-indigo-600 uppercase">
-                          Registered Guests
-                        </p>
-                        <p className="text-base font-black text-indigo-700 font-mono mt-0.5">
-                          {eventMetrics.totalRegisteredGuests}
+                          {eventMetrics.total}
                         </p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-4 gap-2">
-                      <div className="bg-emerald-50/60 p-2 rounded-xl text-center border border-emerald-100/50 col-span-2">
-                        <p className="text-[9px] font-black text-emerald-600 uppercase">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {/* Pending */}
+                      <div className="bg-amber-50/60 p-2.5 rounded-xl text-center border border-amber-100/50">
+                        <p className="text-[9px] font-black text-amber-600 uppercase tracking-wider">
+                          Pending
+                        </p>
+                        <p className="text-sm font-black text-amber-700 font-mono mt-0.5">
+                          {eventMetrics.pending}
+                        </p>
+                      </div>
+
+                      {/* Payment Pending */}
+                      <div className="bg-sky-50/60 p-2.5 rounded-xl text-center border border-sky-100/50">
+                        <p className="text-[9px] font-black text-sky-600 uppercase tracking-wider">
+                          Payment Pending
+                        </p>
+                        <p className="text-sm font-black text-sky-700 font-mono mt-0.5">
+                          {eventMetrics.payment_pending}
+                        </p>
+                      </div>
+
+                      {/* Payment Submitted / Approved */}
+                      <div className="bg-emerald-50/60 p-2.5 rounded-xl text-center border border-emerald-100/50">
+                        <p className="text-[9px] font-black text-emerald-600 uppercase tracking-wider">
                           Approved
                         </p>
-                        <p className="text-sm font-black text-emerald-700 font-mono">
+                        <p className="text-sm font-black text-emerald-700 font-mono mt-0.5">
                           {eventMetrics.approved}
                         </p>
                       </div>
-                      <div className="bg-rose-50/60 p-2 rounded-xl text-center border border-rose-100/50 col-span-2">
-                        <p className="text-[9px] font-black text-rose-600 uppercase">
+
+                      {/* Rejected */}
+                      <div className="bg-rose-50/60 p-2.5 rounded-xl text-center border border-rose-100/50">
+                        <p className="text-[9px] font-black text-rose-600 uppercase tracking-wider">
                           Rejected
                         </p>
-                        <p className="text-sm font-black text-rose-700 font-mono">
+                        <p className="text-sm font-black text-rose-700 font-mono mt-0.5">
                           {eventMetrics.rejected}
                         </p>
                       </div>
@@ -1614,7 +1698,7 @@ export default function EstateDashboardPage({
                           Paid Programs
                         </p>
                         <p className="text-xs font-black text-slate-700 font-mono">
-                          {eventMetrics.paidEvents} Tickets System
+                          {eventMetrics.paidBookings} Paid Reservations
                         </p>
                       </div>
                       <div className="text-right">
@@ -1637,7 +1721,7 @@ export default function EstateDashboardPage({
                 </div>
                 <button
                   onClick={() => {
-                    if (selectedEstate.events) {
+                    if (selectedEstate.bookings) {
                       setEventsSelected(true);
                     }
                   }}
@@ -1681,6 +1765,15 @@ export default function EstateDashboardPage({
         confirmText={warningConfig.confirmText}
         variant={warningConfig.variant}
         onConfirm={warningConfig.onConfirm}
+      />
+      <AdminListModal
+        isOpen={adminListModalOpen}
+        onClose={() => setIsAdminListModalOpen(false)}
+        admins={selectedEstate.admins}
+        onSelectAdmin={(admin) => {
+          setSelectedAdmin(admin);
+          setIsAdminListModalOpen(false); // Close modal on selecting specific admin
+        }}
       />
     </div>
   );

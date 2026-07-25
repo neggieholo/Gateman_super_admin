@@ -96,6 +96,7 @@ export enum ViewState {
   SECURITY = "security",
   RESIDENT = "resident",
   GUARDS = "guards",
+  BILLING = "billing",
 }
 
 export interface UserContextType {
@@ -374,13 +375,14 @@ export interface EstatesDirectoryResponse {
 export interface EstateDetailedContext extends DashboardEstateNode {
   gatepasses: any[];
   posts: any[];
-  events: any[];
+  bookings: any[];
   reports: any[];
   locations: any[];
   services: any[];
   vendors: Vendor[];
   service_requests: any[];
-  admin: any;
+  admins: AdminUser[];
+  root_admin_email: string;
   estate: any;
 }
 
@@ -519,35 +521,38 @@ export interface EventRegistration {
   created_at: string;
 }
 
-export interface EstateEvent {
+export type BookingStatus =
+  | "PENDING_APPROVAL"
+  | "PAYMENT_PENDING"
+  | "PAYMENT_SUBMITTED"
+  | "APPROVED"
+  | "REJECTED";
+
+export interface LocationBooking {
   id: string;
   estate_id: string;
-  organizer_id: string | null;
-  title: string;
-  description: string | null;
-  start_date: string; // YYYY-MM-DD
-  end_date: string; // YYYY-MM-DD
+  resident_id: string;
+  resident_name?: string;
+  venue_id: string;
+  venue_name: string;
+
+  start_date: string; // ISO Date string (YYYY-MM-DD)
+  end_date: string;
   start_time: string; // HH:mm:ss
-  end_time: string; // HH:mm:ss
-  venue_type: string | null;
-  venue_detail: string | null;
-  expected_guests: number | null;
-  banner_url: string | null;
-  is_paid: boolean | null;
-  ticket_price: number | string | null;
-  subaccount_id: string | null;
-  ref_code: string;
-  is_approved: boolean | null;
-  is_rejected: boolean | null;
-  created_at: string | null;
-  bank_code: string | null;
-  bank_name: string | null;
-  account_number: string | null;
-  registered_guests: number;
-  booked_dates: string[]; // ARRAY of date strings
+  end_time: string;
+  booked_dates: string[];
+  total_amount: number;
+
+  is_paid: boolean;
+  status: BookingStatus;
+
+  transaction_ref?: string;
+  payment_url?: string;
+
+  created_at: string;
 }
 
-export interface EstateLocation {
+export interface EstateFacility {
   id: number;
   estate_id: string;
   name: string;
@@ -556,11 +561,15 @@ export interface EstateLocation {
   event_booked_on: Record<
     string,
     {
-      event_banner_url: string;
+      venue_name: string;
       dates: string[];
     }
   >;
   capacity?: number;
+  isPaid?: boolean;
+  bookingRate?: number;
+  bookingRateUnit?: "per_hour" | "per_day" | "per_event";
+  is_active: boolean;
   created_at: string;
 }
 
@@ -663,7 +672,6 @@ export interface DashboardAnalyticsPayload {
   message?: string;
 }
 
-
 export interface notification {
   id: string;
   estate_id: number;
@@ -680,4 +688,47 @@ export interface FetchNotificationsResponse {
   success: boolean;
   list: notification[];
   lastReadAt: string;
+}
+
+export interface SubscriptionPricing {
+  estate_plan: number;
+  security_plan: number;
+}
+
+export interface BillingAnalyticsResponse {
+  success: boolean;
+  stats: {
+    active_estates: string;
+    expired_estates: string;
+    expiring_soon: string;
+  };
+  pricing: SubscriptionPricing;
+}
+
+export interface EstateSubscription {
+  id: string;
+  name: string;
+  estate_code: string;
+  plan: string;
+  subscription_expiry: string | null;
+  status: string;
+  paystack_subaccount_code: string | null;
+  created_at: string;
+}
+
+export interface SubscriptionsResponse {
+  success: boolean;
+  subscriptions: EstateSubscription[];
+}
+
+export interface UpdatePricingResponse {
+  success: boolean;
+  message: string;
+  pricing: SubscriptionPricing;
+}
+
+export interface ExtensionResponse {
+  success: boolean;
+  message: string;
+  estate: EstateSubscription;
 }

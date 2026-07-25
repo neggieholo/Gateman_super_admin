@@ -3,7 +3,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
   Shield,
-  Users,
   Radio,
   Building2,
   UserCheck,
@@ -14,6 +13,7 @@ import { SYSTEM_PERMISSIONS } from "../services/data";
 import { DashboardAnalyticsPayload } from "../services/types";
 import { getDashboardAnalytics } from "../services/apis_estates";
 import { useUser } from "../UserContext";
+import toast from "react-hot-toast";
 
 export default function SuperAdminDashboardOverview() {
   const { setEstatesList } = useUser();
@@ -23,13 +23,83 @@ export default function SuperAdminDashboardOverview() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const hasPassWarn = localStorage.getItem("DASHBOARD_PASS_WARN") === "true";
+    const hasMfaWarn = localStorage.getItem("DASHBOARD_MFA_WARN") === "true";
+
+    // Short circuit if neither warning is flagged
+    if (!hasPassWarn && !hasMfaWarn) return;
+
+    toast(
+      (t) => (
+        <div className="flex flex-col gap-2.5 p-1 max-w-sm">
+          <p className="font-sans font-black text-slate-900 text-sm tracking-tight">
+            ⚠️ Security Profile Configuration Required
+          </p>
+
+          <div className="flex flex-col gap-2 text-xs text-slate-600 font-medium leading-relaxed">
+            {hasPassWarn && (
+              <p>
+                • You are currently using a <strong>temporary password</strong>.
+                For maximum system protection, please configure a new master
+                credential.
+              </p>
+            )}
+            {hasMfaWarn && (
+              <p>
+                • Administrative security policies{" "}
+                <strong>require Multi-Factor Authentication</strong> for your
+                account. Please set up MFA before your next session to avoid
+                access restrictions.
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-2 justify-end mt-1.5 border-t border-slate-100 pt-2">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                localStorage.removeItem("DASHBOARD_PASS_WARN");
+                localStorage.removeItem("DASHBOARD_MFA_WARN");
+              }}
+              className="px-3 py-1.5 text-[10px] font-oswald font-black text-slate-400 hover:text-slate-600 uppercase tracking-wider transition-colors"
+            >
+              Acknowledge Later
+            </button>
+
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                localStorage.removeItem("DASHBOARD_PASS_WARN");
+                localStorage.removeItem("DASHBOARD_MFA_WARN"); // Fixed typo
+
+                // Smart routing path selection
+                window.location.href = hasMfaWarn
+                  ? "/home/settings"
+                  : "/home/change-password";
+              }}
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-oswald font-black uppercase tracking-wider shadow-sm transition-colors"
+            >
+              Configure Profile
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        id: "admin-onboarding-security-alert",
+        duration: Infinity,
+        position: "top-center",
+      },
+    );
+  }, []);
+
+  useEffect(() => {
     const loadDashboardMetrics = async () => {
       try {
         setLoading(true);
         const data = await getDashboardAnalytics();
         if (data.success) {
           setAnalytics(data);
-          setEstatesList(data.estatesList)
+          setEstatesList(data.estatesList);
         }
       } catch (err) {
         console.error("Failed to parse core telemetry metrics shards:", err);

@@ -149,7 +149,7 @@ export default function Settings() {
     type: "email" | "phone" | "mfa_email",
   ) => {
     if (type === "phone" && target && !isValidPhoneNumber(target)) {
-      alert("Invalid phone number format.");
+      toast.error("Invalid phone number format.");
       return;
     }
     setVerifyingField(type);
@@ -223,7 +223,7 @@ export default function Settings() {
           setProfile((prev) => ({
             ...prev,
             mfa_enabled: true,
-            mfa_type: "email",
+            mfa_type: "EMAIL",
           }));
         } else if (verifyingField) {
           setProfile((prev) => ({
@@ -253,15 +253,15 @@ export default function Settings() {
 
   const handleSaveConfig = async () => {
     if (!hasChanges) {
-      alert("No changes detected to save.");
+      toast.error("No changes detected to save.");
       return;
     }
     if (profile.email !== user?.email && !profile.email_verified) {
-      alert("Please verify your new email address before saving.");
+      toast.error("Please verify your new email address before saving.");
       return;
     }
     if (profile.phone !== user?.phone_number && !profile.phone_verified) {
-      alert("Please verify your new phone number before saving.");
+      toast.error("Please verify your new phone number before saving.");
       return;
     }
     setSaving(true);
@@ -360,7 +360,7 @@ export default function Settings() {
     setProfile((prev) => ({
       ...prev,
       mfa_enabled: true,
-      mfa_type: "totp",
+      mfa_type: "TOTP",
     }));
     setDisplayTotpActivator(false);
   };
@@ -598,7 +598,7 @@ export default function Settings() {
                 disabled={mfaEmailEnabled}
                 onClick={() => {
                   if (!profile.email_verified) {
-                    alert("Please verify your email");
+                    toast.error("Please verify your email");
                   } else {
                     handleRequestOtp(profile.email, "mfa_email");
                   }
