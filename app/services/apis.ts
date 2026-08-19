@@ -131,64 +131,6 @@ export const fetchReadableAddress = async (
   }
 };
 
-export const getCloudinaryUrl = async (
-  file: File, // Pass the native Browser File object directly here instead of a string URI
-  selectionType: "image" | "audio" | "video" | "document",
-) => {
-  console.log("uploading into cloudinary");
-  try {
-    if (!file) {
-      console.error("No file provided for upload.");
-      return null;
-    }
-    console.log("uploading into cloudinary:", file);
-
-    const fileSize = file.size;
-    const MAX_SIZE = 50 * 1024 * 1024;
-
-    if (fileSize > MAX_SIZE) {
-      alert("File too large. Max limit is 50MB.");
-      return null;
-    }
-
-    const formData = new FormData();
-
-    // 2. Resource Type Logic
-    let cloudinaryType = "image";
-
-    if (selectionType === "audio" || selectionType === "video") {
-      cloudinaryType = "video"; // Cloudinary treats audio as a video resource type
-    } else if (selectionType === "document") {
-      cloudinaryType = "raw";
-    }
-
-    // Standard web browsers natively know how to read and stream the File object via FormData
-    formData.append("file", file);
-    formData.append("upload_preset", "gateman uploads");
-
-    const res = await fetch(
-      `https://api.cloudinary.com/v1_1/diubaoqcr/${cloudinaryType}/upload`,
-      {
-        method: "POST",
-        body: formData,
-      },
-    );
-
-    const data = await res.json();
-
-    if (data.error) {
-      console.error("Cloudinary Error:", data.error.message);
-      return null;
-    }
-    console.log("Cloudinary Url", data.secure_url);
-
-    return data.secure_url;
-  } catch (err) {
-    console.error("Upload Logic Error:", err);
-    return null;
-  }
-};
-
 export const formatLastSeen = (timestamp: string | null) => {
   if (!timestamp) return "Never";
 
@@ -567,3 +509,88 @@ export const deleteAllNotificationsApi = async () => {
     throw error;
   }
 };
+
+export async function getS3UploadedUrl(
+  file: File,
+  folder: string = "uploads",
+): Promise<string> {
+  // 1. Extract file extension and MIME type directly from the browser File object
+  const fileExtension = file.name.split(".").pop()?.toLowerCase() || "";
+  const mimeType = file.type || getFallbackMimeType(fileExtension);
+  const fileName = `upload_${Date.now()}.${fileExtension || "bin"}`;
+
+  // 2. FETCH #1: Request presigned URL from backend
+  const urlResponse = await fetch('/api/get-upload-url', {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      fileName,
+      fileType: mimeType,
+      folder,
+    }),
+  });
+
+  if (!urlResponse.ok) {
+    throw new Error(
+      `Failed to get presigned URL from backend: ${urlResponse.status}`,
+    );
+  }
+
+  const { uploadUrl, fileUrl } = await urlResponse.json();
+
+  // 3. FETCH #2: Upload binary directly to AWS S3 (file is already a Blob)
+  const s3Response = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": mimeType,
+    },
+    body: file,
+  });
+
+  if (!s3Response.ok) {
+    throw new Error(
+      `Direct S3 binary upload failed with status ${s3Response.status}`,
+    );
+  }
+
+  // 4. Return public S3 URL for backend/database storage
+  return fileUrl;
+}
+
+/**
+ * Fallback MIME type mapper in case file.type is empty string
+ */
+function getFallbackMimeType(ext: string): string {
+  const mimeMap: Record<string, string> = {
+    // Images
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    gif: "image/gif",
+    webp: "image/webp",
+    heic: "image/heic",
+
+    // Videos
+    mp4: "video/mp4",
+    mov: "video/quicktime",
+    avi: "video/x-msvideo",
+    mkv: "video/x-matroska",
+    webm: "video/webm",
+
+    // Documents
+    pdf: "application/pdf",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ppt: "application/vnd.ms-powerpoint",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    txt: "text/plain",
+    csv: "text/csv",
+    json: "application/json",
+  };
+
+  return mimeMap[ext] || "application/octet-stream";
+}

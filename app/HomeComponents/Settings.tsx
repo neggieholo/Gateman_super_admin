@@ -18,9 +18,10 @@ import {
 import "react-phone-number-input/style.css";
 import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 import { useUser } from "../UserContext";
-import { getCloudinaryUrl, sendPofileChangeOtpApi } from "../services/apis";
+import { getS3UploadedUrl, sendPofileChangeOtpApi } from "../services/apis";
 import TotpMfaSetupComponent from "./AuthenticatorSetup";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 interface MfaSetupProps {
   onBack: () => void;
@@ -43,6 +44,7 @@ function MfaSetupComponent({ onBack, onSuccess }: MfaSetupProps) {
 
 export default function Settings() {
   const { user } = useUser();
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
   const [metadata, setMetadata] = useState("");
@@ -311,7 +313,7 @@ export default function Settings() {
 
     setError(null);
     try {
-      const uploadedUrl = await getCloudinaryUrl(file, "image");
+      const uploadedUrl = await getS3UploadedUrl(file, "superuser-avatars");
 
       if (uploadedUrl) {
         setProfile((prev) => ({
@@ -695,7 +697,7 @@ export default function Settings() {
         <div className="space-y-6">
           <div className="bg-white p-5 sm:p-6 rounded-4xl border border-slate-100 shadow-sm space-y-2">
             <button
-              onClick={() => (window.location.href = "/home/change-password")}
+              onClick={() => router.push("/home/change-password")}
               className="w-full flex items-center justify-between p-4 hover:bg-slate-50 rounded-2xl transition-colors group"
             >
               <div className="flex items-center gap-3">

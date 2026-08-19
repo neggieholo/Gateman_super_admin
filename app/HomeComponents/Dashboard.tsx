@@ -16,7 +16,6 @@ import { useUser } from "../UserContext";
 import toast from "react-hot-toast";
 
 export default function SuperAdminDashboardOverview() {
-  const { setEstatesList } = useUser();
   const [analytics, setAnalytics] = useState<DashboardAnalyticsPayload | null>(
     null,
   );
@@ -99,7 +98,6 @@ export default function SuperAdminDashboardOverview() {
         const data = await getDashboardAnalytics();
         if (data.success) {
           setAnalytics(data);
-          setEstatesList(data.estatesList);
         }
       } catch (err) {
         console.error("Failed to parse core telemetry metrics shards:", err);

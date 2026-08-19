@@ -34,10 +34,10 @@ export default function ResidentsOverviewPage({
   all = false,
   onBack,
 }: ResidentsOverviewPageProps) {
-  const { user } = useUser();
+  const { user, estatesList } = useUser();
   const [residents, setResidents] = useState<Resident[]>([]);
   const [estatesMap, setEstatesMap] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [accountTypeFilter, setAccountTypeFilter] =
     useState<AccountFilterType>("all");
@@ -67,8 +67,18 @@ export default function ResidentsOverviewPage({
     onConfirm: () => {},
   });
 
+  const canViewResidents =
+    user?.permissions.includes("estates_management") ||
+    user?.permissions.includes("view_estate_residents") ||
+    user?.permissions.includes("all-access");
+
   // Fetch residents from tenant_users pipeline context matching this estateId
   useEffect(() => {
+    if (!canViewResidents) {
+      showAccessDeniedToast();
+      return;
+    }
+    setLoading(true);
     async function loadResidentsData() {
       try {
         setLoading(true);
@@ -259,6 +269,14 @@ export default function ResidentsOverviewPage({
     }
   };
 
+  if (!canViewResidents) {
+    return (
+      <div className="p-8 text-center text-sm font-semibold text-slate-400 bg-slate-50 rounded-2xl border border-dashed">
+        🔒 View locked down due to restricted access.
+      </div>
+    );
+  }
+
   if (viewAllLogs) {
     if (all) {
       return (
@@ -360,7 +378,7 @@ export default function ResidentsOverviewPage({
                   Live Account Registry Ledger
                 </span>
                 <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-mono">
-                  Showing {filteredResidents.length} records
+                  Showing {filteredResidents.length} Residents
                 </span>
               </div>
 
@@ -429,6 +447,9 @@ export default function ResidentsOverviewPage({
                       <th className="py-3 px-4 bg-slate-50">
                         Registered Estates
                       </th>
+                      {all && (
+                        <th className="py-3 px-4 bg-slate-50">Estate(s)</th>
+                      )}
                       <th className="py-3 px-4 bg-slate-50">Last Activity</th>
                       <th className="py-3 px-4 bg-slate-50 text-right">
                         Onboarded
@@ -445,10 +466,16 @@ export default function ResidentsOverviewPage({
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200 overflow-hidden shrink-0">
-                              {resident.avatar ? (
+                              {resident.avatar &&
+                              Object.values(resident.avatar).length > 0 ? (
                                 <img
-                                  src={resident.avatar}
-                                  alt=""
+                                  src={
+                                    all
+                                      ? Object.values(resident.avatar)[0]
+                                      : resident.avatar[estateId] ||
+                                        Object.values(resident.avatar)[0]
+                                  }
+                                  alt={resident.name || "Resident Avatar"}
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
@@ -484,6 +511,31 @@ export default function ResidentsOverviewPage({
                         <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
                           {resident.estate_ids ? resident.estate_ids.length : 0}
                         </td>
+                        {all && (
+                          <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                            {resident.estate_ids &&
+                            resident.estate_ids.length > 0 ? (
+                              <div className="flex flex-col divide-y divide-slate-200/80">
+                                {estatesList
+                                  .filter((estate) =>
+                                    resident.estate_ids.includes(estate.id),
+                                  )
+                                  .map((estate) => (
+                                    <span
+                                      key={estate.id}
+                                      className="text-xs py-0.5"
+                                    >
+                                      {estate.name}
+                                    </span>
+                                  ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400 font-normal">
+                                No Estate
+                              </span>
+                            )}
+                          </td>
+                        )}
                         <td className="py-3.5 px-4">
                           <p className="text-slate-700 text-[11px]">
                             {resident.last_activity_at
@@ -539,12 +591,18 @@ export default function ResidentsOverviewPage({
               <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <div
                   onClick={() => setShowImagePreview(true)}
-                  className="w-14 h-14 bg-slate-200 rounded-2xl border border-slate-300 shrink-0 overflow-hidden flex items-center justify-center"
+                  className="w-14 h-14 bg-slate-200 rounded-2xl border border-slate-300 shrink-0 overflow-hidden flex items-center justify-center cursor-pointer"
                 >
-                  {selectedResident.avatar ? (
+                  {selectedResident.avatar &&
+                  Object.values(selectedResident.avatar).length > 0 ? (
                     <img
-                      src={selectedResident.avatar}
-                      alt=""
+                      src={
+                        all
+                          ? Object.values(selectedResident.avatar)[0]
+                          : selectedResident.avatar[estateId] ||
+                            Object.values(selectedResident.avatar)[0]
+                      }
+                      alt={selectedResident.name || "Resident Avatar"}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -797,7 +855,7 @@ export default function ResidentsOverviewPage({
               <X size={18} />
             </button>
             <img
-              src={selectedResident?.avatar}
+              src={selectedResident?.avatar[0]}
               alt={`${selectedResident?.name} expanded avatar`}
               className="max-w-full max-h-[80vh] rounded-3xl object-contain border border-slate-800 shadow-2xl select-none"
               onClick={(e) => e.stopPropagation()} // Stop overlay click collapse when clicking image directly

@@ -1,27 +1,97 @@
-import React, { useState, useEffect } from "react";
-import {
-  CreditCard,
-  TrendingUp,
-  AlertTriangle,
-  DollarSign,
-  Settings,
-  RefreshCw,
-} from "lucide-react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
+
+import React, { useState, useEffect, useCallback } from "react";
 import AnalyticsView from "./BillingAnalytics";
 import SubscriptionsLedgerView from "./BillingSubscriptionsView";
 import PricingConfigView from "./BillingPricingView";
+import { billingApi } from "../services/apis_estates";
+import { BillingAnalyticsResponse } from "../services/types";
+import toast from "react-hot-toast";
+import { useUser } from "../UserContext";
+import { showAccessDeniedToast } from "./ManageUsersPage";
 
 export default function BillingDashboard() {
+  const { user } = useUser();
+
+  const hasRootBilling =
+    user?.permissions.includes("all-access") ||
+    user?.permissions.includes("billing_management");
+
+  // Granular Capabilities
+  const canViewFinancials =
+    hasRootBilling || user?.permissions.includes("view_financials");
+
+  const canManagePricing =
+    hasRootBilling || user?.permissions.includes("manage_pricing");
+
+  // Basic Page Access Guard
+  const canAccessPage = canViewFinancials || canManagePricing;
+
+  // ── SMART INITIAL TAB SELECTION ──
+  // If user only has manage_pricing, default to 'pricing' tab instead of 'analytics'
   const [activeTab, setActiveTab] = useState<
     "analytics" | "subscriptions" | "pricing"
-  >("analytics");
+  >(() => (canViewFinancials ? "analytics" : "pricing"));
+
+  // Sync activeTab if permissions finish loading asynchronously
+  useEffect(() => {
+    if (!canViewFinancials && canManagePricing && activeTab === "analytics") {
+      setActiveTab("pricing");
+    }
+  }, [canViewFinancials, canManagePricing, activeTab]);
+
+  // State
+  const [telemetry, setTelemetry] = useState<BillingAnalyticsResponse | null>(
+    null,
+  );
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const checkPermissions = useCallback(() => {
+    if (!canAccessPage) {
+      showAccessDeniedToast();
+      return false;
+    }
+    return true;
+  }, [canAccessPage]);
+
+  useEffect(() => {
+    if (!checkPermissions()) return;
+
+    // Only attempt to fetch financial telemetry if the user actually has view_financials permission
+    if (!canViewFinancials) {
+      setLoading(false);
+      return;
+    }
+
+    async function loadData() {
+      try {
+        setLoading(true);
+        const data = await billingApi.getAnalytics();
+        setTelemetry(data);
+      } catch (err: any) {
+        // Handle 403 status specifically from backend
+        if (err?.response?.status === 403 || err?.status === 403) {
+          toast.error(
+            "Access Denied: You do not have permission to view financial analytics.",
+          );
+        } else {
+          toast.error("Failed to load telemetry details.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, [user, canAccessPage, canViewFinancials, checkPermissions]);
 
   return (
-    <div className="p-6 space-y-6 bg-slate-950 text-slate-100 min-h-screen">
-      {/* ── HEADER ── */}
-      <div className="flex justify-between items-center">
+    <div className="p-2 space-y-6 text-slate-100 h-screen flex flex-col">
+      {/* ── HEADER & GROWTH FILTER ── */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-2xl text-black font-bold tracking-tight">
             Financial & Billing Operations
           </h1>
           <p className="text-sm text-slate-400">
@@ -31,91 +101,64 @@ export default function BillingDashboard() {
         </div>
       </div>
 
-      {/* ── TOP KPI TELEMETRY CARDS ── */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Card 1 */}
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
-          <div className="flex justify-between items-center text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Est. Monthly Revenue
-            </span>
-            <DollarSign className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div className="text-2xl font-bold text-slate-50">₦2,450,000</div>
-          <p className="text-xs text-emerald-400 mt-1 flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" /> +12% from last month
-          </p>
-        </div>
-
-        {/* Card 2 */}
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
-          <div className="flex justify-between items-center text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Active Paid Estates
-            </span>
-            <CreditCard className="w-4 h-4 text-sky-400" />
-          </div>
-          <div className="text-2xl font-bold text-slate-50">11 / 13</div>
-          <p className="text-xs text-slate-400 mt-1">
-            2 Estates pending renewal
-          </p>
-        </div>
-
-        {/* Card 3 */}
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
-          <div className="flex justify-between items-center text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Expiring in &lt; 7 Days
-            </span>
-            <AlertTriangle className="w-4 h-4 text-amber-400" />
-          </div>
-          <div className="text-2xl font-bold text-amber-400">3</div>
-          <p className="text-xs text-slate-400 mt-1">
-            Action required for extension
-          </p>
-        </div>
-
-        {/* Card 4 */}
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
-          <div className="flex justify-between items-center text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Paystack Sub-accounts
-            </span>
-            <RefreshCw className="w-4 h-4 text-indigo-400" />
-          </div>
-          <div className="text-2xl font-bold text-slate-50">13 Active</div>
-          <p className="text-xs text-indigo-400 mt-1">
-            Direct split settlement enabled
-          </p>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
+      {/* ── NAVIGATION TABS ── */}
       <div className="flex border-b border-slate-800 gap-6 text-sm font-medium">
-        <button
-          onClick={() => setActiveTab("analytics")}
-          className={`pb-3 transition-colors ${activeTab === "analytics" ? "border-b-2 border-indigo-500 text-indigo-400" : "text-slate-400 hover:text-slate-200"}`}
-        >
-          📊 Revenue Analytics
-        </button>
-        <button
-          onClick={() => setActiveTab("subscriptions")}
-          className={`pb-3 transition-colors ${activeTab === "subscriptions" ? "border-b-2 border-indigo-500 text-indigo-400" : "text-slate-400 hover:text-slate-200"}`}
-        >
-          💳 Subscriptions & Ledger
-        </button>
-        <button
-          onClick={() => setActiveTab("pricing")}
-          className={`pb-3 transition-colors ${activeTab === "pricing" ? "border-b-2 border-indigo-500 text-indigo-400" : "text-slate-400 hover:text-slate-200"}`}
-        >
-          ⚙️ Plan Pricing Matrix
-        </button>
+        {canViewFinancials && (
+          <button
+            onClick={() => {
+              if (checkPermissions()) setActiveTab("analytics");
+            }}
+            className={`pb-3 transition-colors ${
+              activeTab === "analytics"
+                ? "border-b-2 border-indigo-500 text-indigo-400"
+                : "text-slate-400 hover:text-slate-900"
+            }`}
+          >
+            📊 Revenue Analytics
+          </button>
+        )}
+
+        {canViewFinancials && (
+          <button
+            onClick={() => {
+              if (checkPermissions()) setActiveTab("subscriptions");
+            }}
+            className={`pb-3 transition-colors ${
+              activeTab === "subscriptions"
+                ? "border-b-2 border-indigo-500 text-indigo-400"
+                : "text-slate-400 hover:text-slate-900"
+            }`}
+          >
+            💳 Subscriptions & Ledger
+          </button>
+        )}
+
+        {canManagePricing && (
+          <button
+            onClick={() => {
+              if (checkPermissions()) setActiveTab("pricing");
+            }}
+            className={`pb-3 transition-colors ${
+              activeTab === "pricing"
+                ? "border-b-2 border-indigo-500 text-indigo-400"
+                : "text-slate-400 hover:text-slate-900"
+            }`}
+          >
+            ⚙️ Plan Pricing Matrix
+          </button>
+        )}
       </div>
 
-      {/* Tab Panels */}
-      {activeTab === "analytics" && <AnalyticsView />}
-      {activeTab === "subscriptions" && <SubscriptionsLedgerView />}
-      {activeTab === "pricing" && <PricingConfigView />}
+      {/* ── TAB PANELS ── */}
+      <div className="flex-1 pb-35 overflow-y-auto">
+        {activeTab === "analytics" && canViewFinancials && (
+          <AnalyticsView telemetryData={telemetry} loading={loading} />
+        )}
+        {activeTab === "subscriptions" && canViewFinancials && (
+          <SubscriptionsLedgerView />
+        )}
+        {activeTab === "pricing" && canManagePricing && <PricingConfigView />}
+      </div>
     </div>
   );
 }

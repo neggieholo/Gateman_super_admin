@@ -32,9 +32,9 @@ export default function SecurityPersonnelPage({
   all = false,
   onBack,
 }: SecurityPersonnelPageProps) {
-  const { user } = useUser();
+  const { user, estatesList } = useUser();
   const [guards, setGuards] = useState<SecurityUser[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [dutyFilter, setDutyFilter] = useState<DutyFilterType>("all");
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -70,6 +70,11 @@ export default function SecurityPersonnelPage({
     onConfirm: () => {},
   });
 
+  const canViewSecurity =
+    user?.permissions.includes("estates_management") ||
+    user?.permissions.includes("view_estate_security") ||
+    user?.permissions.includes("all-access");
+
   useEffect(() => {
     if (selectedGuard?.last_known_location) {
       fetchReadableAddress(selectedGuard.last_known_location, true)
@@ -102,6 +107,11 @@ export default function SecurityPersonnelPage({
 
   // Sync security force list
   useEffect(() => {
+    if (!canViewSecurity) {
+      showAccessDeniedToast();
+      return;
+    }
+    setLoading(true);
     async function loadSecurityWorkforce() {
       try {
         setLoading(true);
@@ -267,6 +277,14 @@ export default function SecurityPersonnelPage({
     }
   };
 
+  if (!canViewSecurity) {
+    return (
+      <div className="p-8 text-center text-sm font-semibold text-slate-400 bg-slate-50 rounded-2xl border border-dashed">
+        🔒 View locked down due to restricted access.
+      </div>
+    );
+  }
+
   if (viewAllLogs) {
     if (all) {
       return (
@@ -368,7 +386,7 @@ export default function SecurityPersonnelPage({
                   Live Force Registry Ledger
                 </span>
                 <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-mono">
-                  Showing {filteredGuards.length} guards
+                  Showing {filteredGuards.length} Guards
                 </span>
               </div>
 
@@ -422,6 +440,7 @@ export default function SecurityPersonnelPage({
                         Operational Status
                       </th>
                       <th className="py-3 px-4 bg-slate-50">Contact Points</th>
+                      {all && <th className="py-3 px-4 bg-slate-50">Estate</th>}
                       <th className="py-3 px-4 bg-slate-50">
                         Last Shift Milestone
                       </th>
@@ -484,6 +503,21 @@ export default function SecurityPersonnelPage({
                             {guard.phone || "No Contact Phone"}
                           </p>
                         </td>
+                        {all && (
+                          <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                            {guard.estate_id ? (
+                              <span className="text-xs">
+                                {estatesList.find(
+                                  (estate) => estate.id === guard.estate_id,
+                                )?.name || "Unknown Estate"}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-400 font-normal">
+                                No Estate
+                              </span>
+                            )}
+                          </td>
+                        )}
                         <td className="py-3.5 px-4 text-slate-700">
                           <div className="flex justify-start gap-2">
                             {guard.is_on_duty && guard.last_checkin ? (

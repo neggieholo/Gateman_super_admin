@@ -99,7 +99,7 @@ export default function SideBar({
       id: ViewState.BILLING,
       label: "Revenue & Subscriptions",
       icon: DollarSign,
-      url: "/home/estates",
+      url: "/home/billing",
     },
   ];
 
@@ -148,7 +148,7 @@ export default function SideBar({
       >
         {/* Brand Identity / Logo Header Layout */}
         <div className="p-6 flex items-center border-b border-white/5">
-          <div className="relative w-full h-12 rounded-xl flex items-center justify-center overflow-hidden bg-white/5">
+          <div className="relative w-full h-12 rounded-xl flex items-center justify-center overflow-hidden">
             <Image
               src="/gmlogo.jpg"
               alt="GateMan Logo"

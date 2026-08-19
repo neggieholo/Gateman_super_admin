@@ -6,6 +6,7 @@ import {
   EstateDetailsResponse,
   EstatesDirectoryResponse,
   ExtensionResponse,
+  PricingConfigResponse,
   SecurityUser,
   SubscriptionPricing,
   SubscriptionsResponse,
@@ -335,7 +336,6 @@ export async function getDashboardAnalytics(): Promise<DashboardAnalyticsPayload
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include",
     });
 
     const data = await response.json();
@@ -494,32 +494,33 @@ export const billingApi = {
     }
   },
 
-  // ─── 3. UPDATE GLOBAL SUBSCRIPTION PRICING MATRIX ───
+  getPricingConfig: async (): Promise<PricingConfigResponse> => {
+    console.log("fetch pricing api hit!");
+    const res = await fetch("/api/billing/pricing-config", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const data = await res.json();
+    console.log("billing data:",data);
+    return data
+  },
+
   updatePricingConfig: async (
     pricing: SubscriptionPricing,
   ): Promise<UpdatePricingResponse> => {
-    try {
-      const res = await fetch("/api/billing/pricing-config", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(pricing),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(
-          errorData.message || `HTTP error! status: ${res.status}`,
-        );
-      }
-
-      const data: UpdatePricingResponse = await res.json();
-      console.log("Successfully updated global plan pricing matrix:", data);
-      return data;
-    } catch (error) {
-      console.error("updatePricingConfig Error:", error);
-      throw error;
+    const res = await fetch("/api/billing/pricing-config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(pricing),
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
     }
+    return await res.json();
   },
 
   // ─── 4. MANUAL SUBSCRIPTION EXTENSION / RENEWAL ───

@@ -43,7 +43,6 @@ export default function AddSuperAdmin() {
   // Account Identification Fields State
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
 
   // Strategic System Guard Flags (Enforced by default)
@@ -212,7 +211,6 @@ export default function AddSuperAdmin() {
       const payload = {
         full_name: fullName,
         email: email,
-        password: password,
         phone_number: phoneNumber || null,
         require_password_change: requirePasswordChange,
         sub_account: isSubAccount,
@@ -225,7 +223,6 @@ export default function AddSuperAdmin() {
         toast.success(`Onboarding Profile built for ${fullName}.`);
         setFullName("");
         setEmail("");
-        setPassword("");
         setPhoneNumber("");
         setSelectedPermissions([]);
       } else {
@@ -255,7 +252,7 @@ export default function AddSuperAdmin() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans antialiased text-gm-navy">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans antialiased text-gm-navy h-fit pb-12 pr-2">
       {/* LEFT TWO COLUMNS: CORE ACCOUNT CREATION FORM MATRIX */}
       <form
         onSubmit={handleCreateUserWorkspace}
@@ -304,28 +301,6 @@ export default function AddSuperAdmin() {
                 placeholder="name@gateman.com"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200/60 rounded-xl font-bold text-gm-navy text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-oswald font-black text-slate-400 uppercase tracking-wider">
-                Password
-              </label>
-              <div className="flex relative">
-                <input
-                  type={show ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="*********"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200/60 rounded-xl font-bold text-gm-navy text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShow(!show)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gm-gold hover:text-slate-600 transition-colors"
-                >
-                  {show ? <Eye size={20} /> : <EyeClosed size={20} />}
-                </button>
-              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -509,7 +484,8 @@ export default function AddSuperAdmin() {
                       key={pId}
                       className="px-1.5 py-0.5 bg-white text-slate-500 border border-slate-100 rounded-md text-[12px] font-mono font-semibold"
                     >
-                      {SYSTEM_PERMISSIONS.find((e) => e.id === pId)?.name || pId}
+                      {SYSTEM_PERMISSIONS.find((e) => e.id === pId)?.name ||
+                        pId}
                     </span>
                   ))}
                 </div>

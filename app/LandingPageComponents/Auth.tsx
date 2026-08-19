@@ -23,7 +23,7 @@ export default function Auth() {
   const [isForgot, setIsForgot] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { setUser } = useUser();
+  const { setUser,setEstatesList } = useUser();
   const router = useRouter();
   const [mfaType, setMfaType] = useState<"EMAIL" | "TOTP" | "NONE">("NONE");
   // const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
@@ -179,12 +179,14 @@ export default function Auth() {
           rememberMe: rememberMe,
           coordinates,
         }),
+        credentials: "include",
       });
 
       const data = await response.json();
 
       if (data.success) {
         setUser(data.user);
+        setEstatesList(data.estatesList);
         router.push("/home/dashboard");
         setShowOtpInput(false);
         setOtp(["", "", "", "", "", ""]);
@@ -348,6 +350,7 @@ export default function Auth() {
 
         if (data.success && data.user && !data.user.email_verified) {
           setUser(data.user);
+          setEstatesList(data.estatesList);
           setMfaType("EMAIL");
           setLoading(false);
 
@@ -358,6 +361,7 @@ export default function Auth() {
         // CATCH EMAIL MFA INTERRUPTION
         if (data.status === "EMAIL_MFA_REQUIRED") {
           setUser(data.user);
+          setEstatesList(data.estatesList);
           setMfaType("EMAIL");
           setLoading(false);
 
@@ -369,6 +373,7 @@ export default function Auth() {
         // CATCH TOTP AUTHENTICATOR APP INTERRUPTION
         if (data.status === "TOTP_MFA_REQUIRED") {
           setUser(data.user);
+          setEstatesList(data.estatesList);
           setMfaType("TOTP");
           setShowOtpInput(true); // Open the entry boxes directly (no delivery cycle needed)
           setLoading(false);
@@ -377,6 +382,8 @@ export default function Auth() {
 
         if (data.success) {
           setUser(data.user);
+          setEstatesList(data.estatesList);
+          setEstatesList(data.estatesList);
           if (data.onboarding?.showPasswordWarningPopup) {
             localStorage.setItem("DASHBOARD_PASS_WARN", "true");
           }

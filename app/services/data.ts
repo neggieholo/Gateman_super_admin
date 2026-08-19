@@ -102,14 +102,14 @@ export const SYSTEM_PERMISSIONS: PermissionNode[] = [
     parent_permission: "estates_management",
   },
   {
-    id: "view_estate_logs",
-    name: "View Estate Logs",
-    parent_permission: "logs_management",
-  },
-  {
     id: "logs_management",
     name: "Logs & Security Audits (Root)",
     parent_permission: null,
+  },
+  {
+    id: "view_estate_logs",
+    name: "View Estate Logs",
+    parent_permission: "logs_management",
   },
   {
     id: "view_user_logs",
@@ -160,5 +160,47 @@ export const SYSTEM_PERMISSIONS: PermissionNode[] = [
     id: "edit_system_policies",
     name: "Modify & Commit Global System Policies",
     parent_permission: "security_infrastructure",
+  },
+  // ─── BILLING & FINANCIALS ───
+  {
+    id: "billing_management",
+    name: "Billing & Financials (Root)",
+    parent_permission: null,
+  },
+  {
+    id: "view_financials",
+    name: "View Financial Analytics & Ledgers",
+    parent_permission: "billing_management",
+  },
+  {
+    id: "manage_pricing",
+    name: "Manage Global Pricing",
+    parent_permission: "billing_management",
+  },
+  {
+    id: "manage_subscription",
+    name: "Manage/Extend Subscriptions",
+    parent_permission: "billing_management",
+  },
+  // ─── NOTIFICATIONS MANAGEMENT ───
+  {
+    id: "notifications_management",
+    name: "Notifications Management (Root)",
+    parent_permission: null,
+  },
+  {
+    id: "read_notifications",
+    name: "View & Read System Notifications",
+    parent_permission: "notifications_management",
+  },
+  {
+    id: "send_notifications",
+    name: "Dispatch & Broadcast Notifications",
+    parent_permission: "notifications_management",
+  },
+  {
+    id: "delete_notifications",
+    name: "Purge & Delete Notifications",
+    parent_permission: "notifications_management",
   },
 ];

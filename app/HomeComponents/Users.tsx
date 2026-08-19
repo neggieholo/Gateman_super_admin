@@ -137,12 +137,12 @@ export default function UsersPage() {
       </div>
 
       {/* ─── TAB CONTENT PANELS ─── */}
-      <div className="mt-4 animate-in fade-in duration-150 h-[calc(100vh-210px)] overflow-y-auto pb-10">
+      <div className="mt-4 animate-in fade-in duration-150 h-[calc(100vh-210px)] pb-10 overflow-y-auto always-visible-scrollbar">
         {hasAccessToCurrentPanel ? (
           <>
             {activeTab === "users" && <ManageUsersPage />}
             {activeTab === "add" && <AddSuperAdmin />}
-            {activeTab === "logs" && <UserLogsPage type="user"/>}
+            {activeTab === "logs" && <UserLogsPage type="user" />}
             {activeTab === "my_logs" && (
               <UserLogsPage
                 isolatedAdminId={user?.id}

@@ -159,9 +159,14 @@ export default function EstatesManagement() {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col flex-1  animate-in fade-in duration-150 min-h-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 shrink-0">
             <div>
-              <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                Estates Directory Nodes
-              </h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                  Estates Directory Nodes
+                </h2>
+                <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-mono">
+                  Showing {filteredEstates.length} Estates
+                </span>
+              </div>
               <p className="text-xs text-slate-400">
                 Select an organizational zone node to interact with dedicated
                 resident counts and security parameters.

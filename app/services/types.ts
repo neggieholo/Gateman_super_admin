@@ -382,6 +382,7 @@ export interface EstateDetailedContext extends DashboardEstateNode {
   vendors: Vendor[];
   service_requests: any[];
   admins: AdminUser[];
+  payment_logs: any[];
   root_admin_email: string;
   estate: any;
 }
@@ -586,7 +587,7 @@ export interface Resident {
   phone?: string;
   parent_account_id?: string;
   sub_users: string[];
-  avatar?: string;
+  avatar: Record<string, string>;
   status: "ACTIVE" | "SUSPENDED";
   locations: {
     [estateId: string]: LocationPair[];
@@ -690,19 +691,39 @@ export interface FetchNotificationsResponse {
   lastReadAt: string;
 }
 
-export interface SubscriptionPricing {
-  estate_plan: number;
-  security_plan: number;
+export interface MonthlyHistoryItem {
+  year: number;
+  month: number;
+  month_name: string;
+  total_amount: number;
+  total_transactions: number;
+}
+
+export interface PlanDistributionItem {
+  plan: string;
+  active_revenue: number;
+  expired_revenue: number;
+  total_revenue: number;
+  active_subscribers: number;
+  expired_subscribers: number;
+  total_subscribers: number;
 }
 
 export interface BillingAnalyticsResponse {
   success: boolean;
   stats: {
-    active_estates: string;
-    expired_estates: string;
-    expiring_soon: string;
+    total_estates: number;
+    active_estates: number;
+    expired_estates: number;
+    expiring_soon: number;
   };
-  pricing: SubscriptionPricing;
+  monthly_history: MonthlyHistoryItem[];
+  plan_distribution: PlanDistributionItem[];
+  regional_breakdown: Array<{
+    state: string;
+    total_revenue: number;
+    active_estates: number;
+  }>;
 }
 
 export interface EstateSubscription {
@@ -711,14 +732,35 @@ export interface EstateSubscription {
   estate_code: string;
   plan: string;
   subscription_expiry: string | null;
-  status: string;
-  paystack_subaccount_code: string | null;
+  subscription_status: string;
+  created_at: string;
+}
+
+export interface PaymentLedgerItem {
+  id: string;
+  estate_id: string;
+  estate_name: string | null;
+  estate_code: string | null;
+  processed_by_email: string;
+  amount: number | string;
+  currency: string;
+  plan: string;
+  payment_method: string;
+  payment_reference: string | null;
+  payment_status: string;
+  state: string;
+  country: string;
+  coverage_start_date: string;
+  coverage_end_date: string;
+  duration_months: number;
+  gateway_metadata?: Record<string, any>;
   created_at: string;
 }
 
 export interface SubscriptionsResponse {
   success: boolean;
   subscriptions: EstateSubscription[];
+  payments_ledger: PaymentLedgerItem[];
 }
 
 export interface UpdatePricingResponse {
@@ -732,3 +774,32 @@ export interface ExtensionResponse {
   message: string;
   estate: EstateSubscription;
 }
+
+
+export interface SubscriptionPricing {
+  base_platform_price: number;
+  modules: PricingModules;
+}
+
+export interface PricingModules {
+  payments: number;
+  security: number;
+  community: number;
+  facility_bookings: number;
+  resident_management: number;
+  services_dispatch: number;
+}
+
+export interface PricingConfigResponse {
+  success: boolean;
+  pricing: SubscriptionPricing;
+  updated_at: string | null;
+  message?: string;
+}
+
+export interface UpdatePricingResponse {
+  success: boolean;
+  message: string;
+  pricing: SubscriptionPricing;
+}
+

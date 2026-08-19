@@ -66,3 +66,29 @@ body {
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* Forces scrollbar visibility even when not hovering */
+.always-visible-scrollbar {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #cbd5e1 #f1f5f9; /* Firefox: thumb color | track color */
+}
+
+/* WebKit / Chromium Browsers (Chrome, Safari, Edge) */
+.always-visible-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  display: block;
+}
+
+.always-visible-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.always-visible-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1; /* Visible slate color */
+  border-radius: 8px;
+}
+
+.always-visible-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}

@@ -5,9 +5,11 @@ import { changePassword } from "../services/apis";
 import { Lock, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { useUser } from "../UserContext";
+import { useRouter } from "next/navigation";
 
 export default function ChangePassword() {
-  const {setUser} = useUser();
+  const { setUser } = useUser();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -49,7 +51,7 @@ export default function ChangePassword() {
         });
 
         setTimeout(() => {
-          window.location.href = "/home/dashboard";
+          router.push("/home/dashboard");
         }, 1000);
       } else {
         toast.error(data.message || "Credential verification sync failed.");
