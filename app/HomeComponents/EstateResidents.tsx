@@ -313,7 +313,7 @@ export default function ResidentsOverviewPage({
   }
 
   return (
-    <div className="p-1 sm:p-6 bg-slate-50 overflow-hidden flex flex-col flex-1 min-h-0 space-y-6">
+    <div className="p-1 sm:p-6 bg-slate-50 overflow-hidden flex flex-col h-full min-h-0 space-y-6">
       {/* Navigation Header Bar */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -337,7 +337,7 @@ export default function ResidentsOverviewPage({
         <div>
           <button
             onClick={() => setViewAllLogs(true)}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-600"
           >
             View All Logs
           </button>
@@ -428,7 +428,7 @@ export default function ResidentsOverviewPage({
               </div>
             </div>
 
-            <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 max-h-120.5 scrollbar-thin">
+            <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 scrollbar-thin">
               {filteredResidents.length === 0 ? (
                 <div className="py-20 text-center">
                   <p className="text-xs font-bold text-slate-400">

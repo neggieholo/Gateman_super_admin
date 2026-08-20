@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Shield, ShieldAlert, KeyRound, History } from "lucide-react";
+import { Shield, KeyRound, History } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useUser } from "../UserContext";
 import UserLogsPage from "./UserLogsPage";
 import NetworkPerimeterPage from "./NetworkPerimeterPage";
 import SystemPoliciesPage from "./SystemPoliciesPage";
-import SecurityIncidentsPage from "./SecurityIncidentsPage";
 
 // 🔐 TARGET SECURITY TAB TO ROBUST PERMISSION KEYS
 const SECURITY_TAB_PERMISSIONS = {
@@ -136,7 +135,7 @@ export default function SecurityPage() {
 
         <button
           onClick={() => handleTabSwitch("logs")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-oswald font-black uppercase tracking-wider transition-all flex-1 min-w-[130px] justify-center ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-oswald font-black uppercase tracking-wider transition-all flex-1 min-w-32.5 justify-center ${
             activeTab === "logs"
               ? "bg-slate-900 text-white shadow-md"
               : "text-slate-400 hover:text-slate-700 hover:bg-slate-50"

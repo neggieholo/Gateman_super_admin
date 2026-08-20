@@ -299,7 +299,8 @@ export interface RuleNode {
   network: string;
   type: "ALLOW" | "DENY";
   label: string;
-  addedBy: string;
+  addedById: string;
+  addedByName: string;
 }
 
 export interface MatrixResponse {

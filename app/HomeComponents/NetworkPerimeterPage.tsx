@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -547,7 +548,7 @@ export default function NetworkPerimeterPage() {
                         {rule.label}
                       </td>
                       <td className="p-4 text-xs font-semibold text-slate-600">
-                        {rule.addedBy}
+                        {rule.addedByName}
                       </td>
                       <td className="p-4 text-right">
                         <button

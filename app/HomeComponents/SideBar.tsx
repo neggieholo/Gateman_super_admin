@@ -188,7 +188,7 @@ export default function SideBar({
         </div>
 
         {/* User Profile / Role Switcher Footer */}
-        <div className="p-4 border-t border-white/5 relative">
+        <div className="p-4 border-t border-white/5 relative w-full">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center space-x-3 px-3 py-2.5 w-full rounded-xl hover:bg-white/5 transition-colors border border-transparent group"

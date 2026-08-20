@@ -14,27 +14,27 @@ export default async function SidebarLayout({
     const mobileCheck = isMobile(userAgent);
 
     return (
-        <>
-        {!mobileCheck ?
-        (
-            <div className="flex h-screen bg-[#F8FAFC] overflow-hidden">
-                <SideBar />
-                <div className="flex-1 flex flex-col h-full">
-                    <div className="h-24">
-                        <HomeNavbar />
-                    </div>
-                    <main className="flex-1 p-6">{children}</main>
-                </div>
+      <>
+        {!mobileCheck ? (
+          <div className="flex h-screen bg-[#F8FAFC] overflow-hidden">
+            <SideBar />
+            <div className="flex-1 flex flex-col h-full">
+              <div className="h-24">
+                <HomeNavbar />
+              </div>
+              <main className="flex-1 flex flex-col min-h-0 overflow-hidden p-6">
+                {children}
+              </main>
             </div>
+          </div>
         ) : (
-            <div className="min-h-screen flex flex-col relative bg-white"> 
-                <MobHomeNavbar />
-                <main className="flex-1 overflow-y-auto space-y-5 pb-24 p-4">
-                    {children}
-                </main>
-            </div>
-            )
-        }
-        </>
+          <div className="min-h-screen flex flex-col relative bg-white">
+            <MobHomeNavbar />
+            <main className="flex-1 overflow-y-auto space-y-5 pb-24 p-4">
+              {children}
+            </main>
+          </div>
+        )}
+      </>
     );
 }

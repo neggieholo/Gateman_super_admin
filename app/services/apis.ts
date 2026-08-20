@@ -110,7 +110,7 @@ export const fetchReadableAddress = async (
     }
 
     // 4. Call your PHP service
-    const url = `https://geo.employeetracker.app/reverse.php?lat=${lat}&lon=${lng}&format=json`;
+    const url = `https://geocode.employeetracker.app/reverse.php?lat=${lat}&lon=${lng}&format=json`;
     const response = await fetch(url);
 
     if (!response.ok) throw new Error(`HTTP ${response.status}`);

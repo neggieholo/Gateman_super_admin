@@ -345,9 +345,9 @@ export default function SecurityPersonnelPage({
         <div>
           <button
             onClick={() => setViewAllLogs(true)}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-600"
           >
-            View Logs History
+            View All Logs
           </button>
         </div>
       </div>
