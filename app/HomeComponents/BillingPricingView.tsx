@@ -1,17 +1,16 @@
 import React, { useEffect, useState, useMemo } from "react";
 import toast from "react-hot-toast";
 import { Loader2, ShieldCheck, CheckCircle2, Save, Info } from "lucide-react";
-import {
-  PricingConfigResponse,
-  PricingModules,
-  SubscriptionPricing,
-  UpdatePricingResponse,
-} from "../services/types";
 import { billingApi } from "../services/apis_estates";
-
-type ModulePricingInputs = {
-  [K in keyof PricingModules]: number | "";
-};
+import {
+  DurationTier,
+  ModulePricingInputMatrix,
+  ModulePricingMatrix,
+  SubscriptionPricingConfig,
+  TierPricing,
+  TierPricingInputs,
+} from "../services/types";
+import { useUser } from "../UserContext";
 
 interface DefaultModule {
   title: string;
@@ -29,41 +28,74 @@ const DEFAULT_MODULES: DefaultModule[] = [
     description:
       "Admin team management, sub-user creation, and permission controls.",
   },
+  {
+    title: "Resident Management",
+    description:
+      "Resident onboarding approvals, directory, and activity audit logs.",
+  },
 ];
 
-const MODULE_KEYS: (keyof PricingModules)[] = [
+const MODULE_KEYS: (keyof ModulePricingMatrix)[] = [
   "payments",
   "security",
   "community",
   "facility_bookings",
-  "resident_management",
   "services_dispatch",
 ];
 
+const DURATION_TIERS: { key: DurationTier; label: string }[] = [
+  { key: "monthly", label: "1 Month" },
+  { key: "six_months", label: "6 Months" },
+  { key: "twelve_months", label: "12 Months" },
+  { key: "twenty_four_months", label: "24 Months" },
+];
+
+const DEFAULT_TIERS: TierPricing = {
+  monthly: 0,
+  six_months: 0,
+  twelve_months: 0,
+  twenty_four_months: 0,
+};
+
+const DEFAULT_TIERS_INPUT: TierPricingInputs = {
+  monthly: 0,
+  six_months: 0,
+  twelve_months: 0,
+  twenty_four_months: 0,
+};
+
 export default function PricingConfigView() {
-  // Temporary mock for user context permissions (Replace with your actual context hook)
-  const canChangePricing = true;
+  const { user } = useUser();
+
+  const hasRootBilling =
+    user?.permissions.includes("all-access") ||
+    user?.permissions.includes("billing_management");
+
+  const canChangePricing =
+    hasRootBilling || user?.permissions.includes("manage_pricing");
 
   // ─── STATE ───
-  const [basePrice, setBasePrice] = useState<number | "">(0);
-  const [modulePrices, setModulePrices] = useState<ModulePricingInputs>({
-    payments: 0,
-    security: 0,
-    community: 0,
-    facility_bookings: 0,
-    resident_management: 0,
-    services_dispatch: 0,
+  const [basePrice, setBasePrice] =
+    useState<TierPricingInputs>(DEFAULT_TIERS_INPUT);
+
+  const [modulePrices, setModulePrices] = useState<ModulePricingInputMatrix>({
+    payments: { ...DEFAULT_TIERS_INPUT },
+    security: { ...DEFAULT_TIERS_INPUT },
+    community: { ...DEFAULT_TIERS_INPUT },
+    facility_bookings: { ...DEFAULT_TIERS_INPUT },
+    services_dispatch: { ...DEFAULT_TIERS_INPUT },
   });
 
-  const [initialBasePrice, setInitialBasePrice] = useState<number>(0);
+  const [initialBasePrice, setInitialBasePrice] =
+    useState<TierPricing>(DEFAULT_TIERS);
+    
   const [initialModulePrices, setInitialModulePrices] =
-    useState<PricingModules>({
-      payments: 0,
-      security: 0,
-      community: 0,
-      facility_bookings: 0,
-      resident_management: 0,
-      services_dispatch: 0,
+    useState<ModulePricingMatrix>({
+      payments: { ...DEFAULT_TIERS },
+      security: { ...DEFAULT_TIERS },
+      community: { ...DEFAULT_TIERS },
+      facility_bookings: { ...DEFAULT_TIERS },
+      services_dispatch: { ...DEFAULT_TIERS },
     });
 
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -71,21 +103,20 @@ export default function PricingConfigView() {
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   const fetchPricing = async () => {
-    console.log("Fetching pricing");
     setIsLoading(true);
     try {
+      // Replace with your API endpoint call
       const res = await billingApi.getPricingConfig();
       if (res.success && res.pricing) {
-        const base = res.pricing.base_platform_price ?? 0;
+        const base = res.pricing.base_platform_price || DEFAULT_TIERS;
         const mods = res.pricing.modules || {};
 
-        const fetchedModules: PricingModules = {
-          payments: mods.payments ?? 0,
-          security: mods.security ?? 0,
-          community: mods.community ?? 0,
-          facility_bookings: mods.facility_bookings ?? 0,
-          resident_management: mods.resident_management ?? 0,
-          services_dispatch: mods.services_dispatch ?? 0,
+        const fetchedModules: ModulePricingMatrix = {
+          payments: { ...DEFAULT_TIERS, ...mods.payments },
+          security: { ...DEFAULT_TIERS, ...mods.security },
+          community: { ...DEFAULT_TIERS, ...mods.community },
+          facility_bookings: { ...DEFAULT_TIERS, ...mods.facility_bookings },
+          services_dispatch: { ...DEFAULT_TIERS, ...mods.services_dispatch },
         };
 
         setBasePrice(base);
@@ -109,22 +140,42 @@ export default function PricingConfigView() {
     fetchPricing();
   }, []);
 
-  const handleModuleChange = (key: keyof PricingModules, value: string) => {
+  // ─── HANDLERS ───
+  const handleBaseChange = (tier: DurationTier, value: string) => {
+    setBasePrice((prev) => ({
+      ...prev,
+      [tier]: value === "" ? "" : Number(value),
+    }));
+  };
+
+  const handleModuleChange = (
+    moduleKey: keyof ModulePricingMatrix,
+    tier: DurationTier,
+    value: string,
+  ) => {
     setModulePrices((prev) => ({
       ...prev,
-      [key]: value === "" ? "" : Number(value),
+      [moduleKey]: {
+        ...prev[moduleKey],
+        [tier]: value === "" ? "" : Number(value),
+      },
     }));
   };
 
   // ─── CHANGE DETECTION ───
   const hasChanges = useMemo(() => {
-    const curBase = basePrice === "" ? 0 : basePrice;
-    if (curBase !== initialBasePrice) return true;
+    for (const { key: tier } of DURATION_TIERS) {
+      const curBase = basePrice[tier] === "" ? 0 : basePrice[tier];
+      if (curBase !== initialBasePrice[tier]) return true;
+    }
 
-    for (const key of MODULE_KEYS) {
-      const currentVal = modulePrices[key] === "" ? 0 : modulePrices[key];
-      const initialVal = initialModulePrices[key] ?? 0;
-      if (currentVal !== initialVal) return true;
+    for (const modKey of MODULE_KEYS) {
+      for (const { key: tier } of DURATION_TIERS) {
+        const curVal =
+          modulePrices[modKey][tier] === "" ? 0 : modulePrices[modKey][tier];
+        const initVal = initialModulePrices[modKey]?.[tier] ?? 0;
+        if (curVal !== initVal) return true;
+      }
     }
     return false;
   }, [basePrice, modulePrices, initialBasePrice, initialModulePrices]);
@@ -138,42 +189,40 @@ export default function PricingConfigView() {
       return;
     }
 
-    const curBase = basePrice === "" ? 0 : Number(basePrice);
-    if (curBase < 0) {
-      toast.error("Base platform price cannot be negative.");
-      return;
-    }
+    const sanitizeTiers = (input: TierPricingInputs): TierPricing => ({
+      monthly: input.monthly === "" ? 0 : Number(input.monthly),
+      six_months: input.six_months === "" ? 0 : Number(input.six_months),
+      twelve_months:
+        input.twelve_months === "" ? 0 : Number(input.twelve_months),
+      twenty_four_months:
+        input.twenty_four_months === "" ? 0 : Number(input.twenty_four_months),
+    });
 
-    const sanitizedModules: PricingModules = {
-      payments:
-        modulePrices.payments === "" ? 0 : Number(modulePrices.payments),
-      security:
-        modulePrices.security === "" ? 0 : Number(modulePrices.security),
-      community:
-        modulePrices.community === "" ? 0 : Number(modulePrices.community),
-      facility_bookings:
-        modulePrices.facility_bookings === ""
-          ? 0
-          : Number(modulePrices.facility_bookings),
-      resident_management:
-        modulePrices.resident_management === ""
-          ? 0
-          : Number(modulePrices.resident_management),
-      services_dispatch:
-        modulePrices.services_dispatch === ""
-          ? 0
-          : Number(modulePrices.services_dispatch),
+    const sanitizedBase = sanitizeTiers(basePrice);
+    const sanitizedModules: ModulePricingMatrix = {
+      payments: sanitizeTiers(modulePrices.payments),
+      security: sanitizeTiers(modulePrices.security),
+      community: sanitizeTiers(modulePrices.community),
+      facility_bookings: sanitizeTiers(modulePrices.facility_bookings),
+      services_dispatch: sanitizeTiers(modulePrices.services_dispatch),
     };
 
-    for (const key of MODULE_KEYS) {
-      if (sanitizedModules[key] < 0) {
-        toast.error("Feature module prices cannot be negative.");
+    // Validation
+    for (const { key: tier } of DURATION_TIERS) {
+      if (sanitizedBase[tier] < 0) {
+        toast.error("Base platform price cannot be negative.");
         return;
+      }
+      for (const modKey of MODULE_KEYS) {
+        if (sanitizedModules[modKey][tier] < 0) {
+          toast.error("Module prices cannot be negative.");
+          return;
+        }
       }
     }
 
-    const payload: SubscriptionPricing = {
-      base_platform_price: curBase,
+    const payload: SubscriptionPricingConfig = {
+      base_platform_price: sanitizedBase,
       modules: sanitizedModules,
     };
 
@@ -182,10 +231,8 @@ export default function PricingConfigView() {
       const res = await billingApi.updatePricingConfig(payload);
 
       if (res.success) {
-        toast.success(
-          res.message || "Feature pricing matrix updated successfully!",
-        );
-        const newBase = res.pricing.base_platform_price ?? curBase;
+        toast.success(res.message || "Pricing matrix updated successfully!");
+        const newBase = res.pricing.base_platform_price || sanitizedBase;
         const newMods = res.pricing.modules || sanitizedModules;
 
         setBasePrice(newBase);
@@ -221,7 +268,8 @@ export default function PricingConfigView() {
             Modular Feature Pricing Matrix
           </h3>
           <p className="text-xs text-slate-400 mt-1">
-            Configure monthly standalone costs for each optional module.
+            Configure rates per duration tier (1m, 6m, 12m, 24m) for each
+            optional module.
           </p>
         </div>
         {lastUpdated && (
@@ -232,71 +280,82 @@ export default function PricingConfigView() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* LEFT COLUMN: Inputs */}
+        {/* LEFT COLUMN: Duration Matrix Inputs */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between mb-1">
-            <h4 className="text-sm text-black font-bold uppercase tracking-wider">
-              Optional Add-on Modules (Configurable)
+            <h4 className="text-sm text-slate-200 font-bold uppercase tracking-wider">
+              Add-on Modules Matrix
             </h4>
-            <span className="text-xs text-slate-400">Monthly Rate (NGN)</span>
+            <span className="text-xs text-slate-400">Total NGN / Period</span>
           </div>
 
           {/* Base Platform Entry */}
-          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-4">
-            <div className="space-y-1 max-w-sm">
+          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+            <div>
               <label className="text-sm font-bold text-indigo-300 block">
                 Base Platform Access Fee
               </label>
               <p className="text-xs text-slate-400">
-                Minimum monthly fee billed to any estate regardless of selected
-                modules.
+                Minimum fee billed to any estate across subscription durations.
               </p>
             </div>
-            <div className="relative w-36 shrink-0">
-              <span className="absolute left-3 top-2.5 text-slate-500 text-xs font-bold">
-                ₦
-              </span>
-              <input
-                type="number"
-                min="0"
-                disabled={!canChangePricing}
-                value={basePrice}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setBasePrice(
-                    e.target.value === "" ? "" : Number(e.target.value),
-                  )
-                }
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-7 pr-3 py-2 text-sm font-mono text-slate-100 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
-              />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {DURATION_TIERS.map(({ key, label }) => (
+                <div key={key} className="space-y-1">
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase">
+                    {label}
+                  </span>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-2 text-slate-500 text-xs font-bold">
+                      ₦
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      disabled={!canChangePricing}
+                      value={basePrice[key]}
+                      onChange={(e) => handleBaseChange(key, e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-6 pr-2 py-1.5 text-xs font-mono text-slate-100 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Dynamic Module Inputs */}
           <div className="space-y-3">
-            {MODULE_KEYS.map((key) => (
+            {MODULE_KEYS.map((modKey) => (
               <div
-                key={key}
-                className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-4"
+                key={modKey}
+                className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3"
               >
-                <div className="space-y-1 max-w-md">
-                  <span className="text-sm font-semibold text-slate-200 block capitalize">
-                    {key.replace("_", " ")}
-                  </span>
-                </div>
-                <div className="relative w-36 shrink-0">
-                  <span className="absolute left-3 top-2.5 text-slate-500 text-xs font-bold">
-                    ₦
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    disabled={!canChangePricing}
-                    value={modulePrices[key]}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      handleModuleChange(key, e.target.value)
-                    }
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-7 pr-3 py-2 text-sm font-mono text-slate-100 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
-                  />
+                <span className="text-sm font-semibold text-slate-200 block capitalize">
+                  {modKey.replace("_", " ")}
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {DURATION_TIERS.map(({ key: tierKey, label }) => (
+                    <div key={tierKey} className="space-y-1">
+                      <span className="text-[10px] font-semibold text-slate-400 uppercase">
+                        {label}
+                      </span>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-2 text-slate-500 text-xs font-bold">
+                          ₦
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          disabled={!canChangePricing}
+                          value={modulePrices[modKey][tierKey]}
+                          onChange={(e) =>
+                            handleModuleChange(modKey, tierKey, e.target.value)
+                          }
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-6 pr-2 py-1.5 text-xs font-mono text-slate-100 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
@@ -324,7 +383,7 @@ export default function PricingConfigView() {
         {/* RIGHT COLUMN: Default Features */}
         <div className="space-y-4">
           <div className="flex items-center justify-between mb-1">
-            <h4 className="text-sm font-bold text-black uppercase tracking-wider">
+            <h4 className="text-sm font-bold text-slate-200 uppercase tracking-wider">
               Included Core Defaults
             </h4>
             <span className="text-xs text-emerald-400 font-semibold">

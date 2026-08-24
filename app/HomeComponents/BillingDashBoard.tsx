@@ -69,8 +69,8 @@ export default function BillingDashboard() {
         setLoading(true);
         const data = await billingApi.getAnalytics();
         setTelemetry(data);
+        console.log("Telemetry Data:", data);
       } catch (err: any) {
-        // Handle 403 status specifically from backend
         if (err?.response?.status === 403 || err?.status === 403) {
           toast.error(
             "Access Denied: You do not have permission to view financial analytics.",

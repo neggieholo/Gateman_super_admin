@@ -700,14 +700,19 @@ export interface MonthlyHistoryItem {
   total_transactions: number;
 }
 
-export interface PlanDistributionItem {
-  plan: string;
-  active_revenue: number;
-  expired_revenue: number;
-  total_revenue: number;
-  active_subscribers: number;
-  expired_subscribers: number;
-  total_subscribers: number;
+export type AddOnType =
+  | "payments"
+  | "security"
+  | "community"
+  | "facility_bookings"
+  | "services_dispatch";
+
+export interface FeatureDistributionItem {
+  feature_name: AddOnType;
+  active_estates: number;
+  expired_estates: number;
+  trial_estates: number;
+  total_estates: number;
 }
 
 export interface BillingAnalyticsResponse {
@@ -719,7 +724,7 @@ export interface BillingAnalyticsResponse {
     expiring_soon: number;
   };
   monthly_history: MonthlyHistoryItem[];
-  plan_distribution: PlanDistributionItem[];
+  feature_distribution: FeatureDistributionItem[];
   regional_breakdown: Array<{
     state: string;
     total_revenue: number;
@@ -767,7 +772,7 @@ export interface SubscriptionsResponse {
 export interface UpdatePricingResponse {
   success: boolean;
   message: string;
-  pricing: SubscriptionPricing;
+  pricing: SubscriptionPricingConfig;
 }
 
 export interface ExtensionResponse {
@@ -777,23 +782,47 @@ export interface ExtensionResponse {
 }
 
 
-export interface SubscriptionPricing {
-  base_platform_price: number;
-  modules: PricingModules;
+export type DurationTier =
+  | "monthly"
+  | "six_months"
+  | "twelve_months"
+  | "twenty_four_months";
+
+export interface TierPricing {
+  monthly: number;
+  six_months: number;
+  twelve_months: number;
+  twenty_four_months: number;
 }
 
-export interface PricingModules {
-  payments: number;
-  security: number;
-  community: number;
-  facility_bookings: number;
-  resident_management: number;
-  services_dispatch: number;
+export type TierPricingInputs = {
+  [K in DurationTier]: number | "";
+};
+
+export type ModulePricingMatrix = {
+  payments: TierPricing;
+  security: TierPricing;
+  community: TierPricing;
+  facility_bookings: TierPricing;
+  services_dispatch: TierPricing;
+};
+
+export type ModulePricingInputMatrix = {
+  payments: TierPricingInputs;
+  security: TierPricingInputs;
+  community: TierPricingInputs;
+  facility_bookings: TierPricingInputs;
+  services_dispatch: TierPricingInputs;
+};
+
+export interface SubscriptionPricingConfig {
+  base_platform_price: TierPricing;
+  modules: ModulePricingMatrix;
 }
 
 export interface PricingConfigResponse {
   success: boolean;
-  pricing: SubscriptionPricing;
+  pricing: SubscriptionPricingConfig;
   updated_at: string | null;
   message?: string;
 }
@@ -801,6 +830,6 @@ export interface PricingConfigResponse {
 export interface UpdatePricingResponse {
   success: boolean;
   message: string;
-  pricing: SubscriptionPricing;
+  pricing: SubscriptionPricingConfig;
 }
 

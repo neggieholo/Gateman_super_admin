@@ -8,7 +8,7 @@ import {
   ExtensionResponse,
   PricingConfigResponse,
   SecurityUser,
-  SubscriptionPricing,
+  SubscriptionPricingConfig,
   SubscriptionsResponse,
   UpdatePricingResponse,
 } from "./types";
@@ -508,7 +508,7 @@ export const billingApi = {
   },
 
   updatePricingConfig: async (
-    pricing: SubscriptionPricing,
+    pricing: SubscriptionPricingConfig,
   ): Promise<UpdatePricingResponse> => {
     const res = await fetch("/api/billing/pricing-config", {
       method: "PUT",

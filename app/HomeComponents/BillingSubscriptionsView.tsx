@@ -5,6 +5,17 @@ import { EstateSubscription, PaymentLedgerItem } from "../services/types";
 import toast from "react-hot-toast";
 import { useUser } from "../UserContext";
 import { showAccessDeniedToast } from "./ManageUsersPage";
+import { ADDON_MODULES } from "../services/data";
+
+
+const PLAN_OPTIONS = [
+  { id: "ALL", label: "All Plans" },
+  { id: "trial", label: "Trial" },
+  ...ADDON_MODULES.map((addon) => ({
+    id: addon.id,
+    label: addon.name,
+  })),
+];
 
 export default function SubscriptionsLedgerView() {
   const { user } = useUser();
@@ -48,6 +59,38 @@ export default function SubscriptionsLedgerView() {
     loadData();
   }, [user]);
 
+  const matchPlanFilter = (planRaw: any, selectedFilter: string): boolean => {
+    if (selectedFilter === "ALL") return true;
+
+    // Safe parse if plan is stored as a JSON string in DB
+    const plan =
+      typeof planRaw === "string"
+        ? (() => {
+            try {
+              return JSON.parse(planRaw);
+            } catch {
+              return planRaw;
+            }
+          })()
+        : planRaw;
+
+    if (selectedFilter === "trial") {
+      return Boolean(plan?.is_trial);
+    }
+
+    // Direct string plan check (e.g., if plan is saved as a single module ID)
+    if (typeof plan === "string") {
+      return plan.toLowerCase() === selectedFilter.toLowerCase();
+    }
+
+    // Array check for multi-module subscriptions
+    if (Array.isArray(plan?.selected_add_ons)) {
+      return plan.selected_add_ons.includes(selectedFilter);
+    }
+
+    return false;
+  };
+
   // Filter Logic: Subscriptions Tab
   const filteredSubscriptions = useMemo(() => {
     return subscriptions.filter((sub) => {
@@ -59,7 +102,7 @@ export default function SubscriptionsLedgerView() {
         statusFilter === "ALL" ||
         sub.subscription_status.toUpperCase() === statusFilter;
 
-      const matchesPlan = planFilter === "ALL" || sub.plan === planFilter;
+      const matchesPlan = matchPlanFilter(sub.plan, planFilter);
 
       return matchesSearch && matchesStatus && matchesPlan;
     });
@@ -81,15 +124,13 @@ export default function SubscriptionsLedgerView() {
         statusFilter === "ALL" ||
         item.payment_status.toUpperCase() === statusFilter;
 
-      const matchesPlan = planFilter === "ALL" || item.plan === planFilter;
+      const matchesPlan = matchPlanFilter(item.plan, planFilter);
 
-      // Date Range Filtering against created_at
       let matchesDate = true;
       if (dateFrom) {
         matchesDate = new Date(item.created_at) >= new Date(dateFrom);
       }
       if (matchesDate && dateTo) {
-        // Set end-of-day for the "To" date threshold
         const endOfDayTo = new Date(dateTo);
         endOfDayTo.setHours(23, 59, 59, 999);
         matchesDate = new Date(item.created_at) <= endOfDayTo;
@@ -181,9 +222,11 @@ export default function SubscriptionsLedgerView() {
             onChange={(e) => setPlanFilter(e.target.value)}
             className="bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3 py-2 rounded-lg focus:outline-none focus:border-indigo-500"
           >
-            <option value="ALL">All Plans</option>
-            <option value="security_only">Security Only</option>
-            <option value="estate_management">Estate Management</option>
+            {PLAN_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
           </select>
 
           {/* Status Filter */}
@@ -242,7 +285,7 @@ export default function SubscriptionsLedgerView() {
 
       {/* Ledger Revenue Summary Banner - Fixed */}
       {!loading && !error && activeTab === "ledger" && (
-        <div className="px-4 py-3 bg-slate-950/60 border-b border-slate-800/80 flex items-center justify-between flex-shrink-0">
+        <div className="px-4 py-3 bg-slate-950/60 border-b border-slate-800/80 flex items-center justify-between shrink-0">
           <div className="text-xs text-slate-400 flex items-center gap-1.5">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
             <span>Period Transaction Revenue Summary:</span>
@@ -304,17 +347,27 @@ export default function SubscriptionsLedgerView() {
                       {sub.estate_code}
                     </td>
                     <td className="p-3">
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
-                          sub.plan === "estate_management"
-                            ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-                            : "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
-                        }`}
-                      >
-                        {sub.plan === "estate_management"
-                          ? "Estate Management"
-                          : "Security Only"}
-                      </span>
+                      {(() => {
+                        const plan =
+                          typeof sub.plan === "string"
+                            ? JSON.parse(sub.plan || "{}")
+                            : sub.plan;
+
+                        if (plan?.is_trial)
+                          return (
+                            <span className="font-medium text-amber-500">
+                              Trial
+                            </span>
+                          );
+
+                        return (
+                          <div className="capitalize font-medium text-slate-400">
+                            {plan?.selected_add_ons
+                              ?.map((f: string) => f.replace(/_/g, " "))
+                              .join(", ") || "Base Plan"}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="p-3">
                       {sub.subscription_expiry
@@ -406,12 +459,31 @@ export default function SubscriptionsLedgerView() {
                       {item.payment_reference || "N/A"}
                     </td>
                     <td className="p-3">
-                      <div className="capitalize">
-                        {item.plan.replace("_", " ")}
-                      </div>
-                      <div className="text-[10px] text-slate-500">
-                        {item.duration_months} month(s)
-                      </div>
+                      {(() => {
+                        const plan =
+                          typeof item.plan === "string"
+                            ? JSON.parse(item.plan || "{}")
+                            : item.plan;
+
+                        return (
+                          <div>
+                            <div className="capitalize font-medium text-slate-400">
+                              {plan?.is_trial ? (
+                                <span className="text-amber-600">Trial</span>
+                              ) : (
+                                plan?.selected_add_ons
+                                  ?.map((addon: string) =>
+                                    addon.replace(/_/g, " "),
+                                  )
+                                  .join(", ") || "Base Plan"
+                              )}
+                            </div>
+                            <div className="text-[10px] text-slate-500">
+                              {item.duration_months} month(s)
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="p-3 font-semibold text-slate-100">
                       {item.currency}{" "}

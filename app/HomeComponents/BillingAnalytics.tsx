@@ -24,20 +24,47 @@ import {
   Cell,
 } from "recharts";
 import { useUser } from "../UserContext";
-import { BillingAnalyticsResponse } from "../services/types";
+import { AddOnType, BillingAnalyticsResponse } from "../services/types";
 
 interface AnalyticsViewProps {
   telemetryData: BillingAnalyticsResponse | null;
   loading?: boolean;
 }
 
-type DistributionFilter = "active" | "expired" | "all";
+type DistributionFilter = "active" | "expired" | "trial" | "all";
 
-const COLOR_MAP: Record<string, string> = {
-  estate_management: "#6366f1",
-  security_only: "#10b981",
-  enterprise: "#f59e0b",
-  DEFAULT: "#8b5cf6",
+export const FEATURE_COLOR_MAP: Record<AddOnType | "DEFAULT", string> = {
+  security: "#10b981", // Emerald Green
+  payments: "#6366f1", // Indigo
+  community: "#f59e0b", // Amber
+  facility_bookings: "#3b82f6", // Blue
+  services_dispatch: "#ec4899", // Pink
+  DEFAULT: "#8b5cf6", // Purple fallback
+};
+
+// Human-readable display labels for UI rendering
+export const FEATURE_LABEL_MAP: Record<AddOnType, string> = {
+  security: "Security Gate Plus",
+  payments: "Financials & Payments",
+  community: "Community Hub",
+  facility_bookings: "Facility Bookings",
+  services_dispatch: "Services Dispatch",
+};
+
+/**
+ * Safely resolves a hex color for a given feature name.
+ */
+export const getFeatureColor = (featureName: string): string => {
+  return (
+    FEATURE_COLOR_MAP[featureName as AddOnType] || FEATURE_COLOR_MAP.DEFAULT
+  );
+};
+
+/**
+ * Safely resolves a user-friendly display string for a given feature name.
+ */
+export const getFeatureLabel = (featureName: string): string => {
+  return FEATURE_LABEL_MAP[featureName as AddOnType] || featureName;
 };
 
 const MONTH_NAMES = [
@@ -184,70 +211,93 @@ export default function AnalyticsView({
   }, [telemetryData, selectedYear, selectedMonth]);
 
   // PieChart Data
-  const formattedPlanDistribution = useMemo(() => {
-    if (!telemetryData?.plan_distribution) return [];
+  // PieChart Data Transformation Fix
+  const formattedFeatureDistribution = useMemo(() => {
+    if (!telemetryData?.feature_distribution) return [];
 
-    return telemetryData.plan_distribution.map((item) => {
-      const formattedName =
-        item.plan === "estate_management"
-          ? "Estate Management"
-          : item.plan === "security_only"
-            ? "Security Gate Plus"
-            : item.plan;
+    return telemetryData.feature_distribution
+      .map((item) => {
+        let subscriberCount = 0;
 
-      let subscriberCount = item.total_subscribers;
-      let revenueAmount = Number(item.total_revenue || 0);
+        if (distributionFilter === "active") {
+          subscriberCount = Number(item.active_estates || 0);
+        } else if (distributionFilter === "expired") {
+          subscriberCount = Number(item.expired_estates || 0);
+        } else if (distributionFilter === "trial") {
+          // Ensure trial_estates is fallback-checked and converted to a number
+          subscriberCount = Number(item.trial_estates || 0);
+        } else {
+          // "all" filter
+          subscriberCount = Number(item.total_estates || 0);
+        }
 
-      if (distributionFilter === "active") {
-        subscriberCount = item.active_subscribers;
-        revenueAmount = Number(item.active_revenue || 0);
-      } else if (distributionFilter === "expired") {
-        subscriberCount = item.expired_subscribers;
-        revenueAmount = Number(item.expired_revenue || 0);
-      }
-
-      return {
-        name: formattedName,
-        value: Number(subscriberCount),
-        revenue: revenueAmount,
-        color: COLOR_MAP[item.plan] || COLOR_MAP.DEFAULT,
-      };
-    });
+        return {
+          name: getFeatureLabel(item.feature_name),
+          value: subscriberCount,
+          activeEstates: Number(item.active_estates || 0),
+          trialEstates: Number(item.trial_estates || 0),
+          expiredEstates: Number(item.expired_estates || 0),
+          totalEstates: Number(item.total_estates || 0),
+          color: getFeatureColor(item.feature_name),
+        };
+      })
+      .filter((entry) => entry.value > 0);
   }, [telemetryData, distributionFilter]);
 
   // Export CSV Handler
   const handleExportCSV = () => {
     if (!telemetryData) return;
 
-    let csvContent = "data:text/csv;charset=utf-8,";
+    const rows: string[] = [];
 
     // 1. Monthly Revenue Breakdown Section
-    csvContent += "MONTHLY REVENUE HISTORY\n";
-    csvContent += "Year,Month,Revenue (NGN),Transactions\n";
+    rows.push("MONTHLY REVENUE HISTORY");
+    rows.push("Year,Month,Revenue (NGN),Transactions");
 
     const sortedHistory = [...(telemetryData.monthly_history || [])].sort(
       (a, b) => b.year - a.year || b.month - a.month,
     );
 
     sortedHistory.forEach((row) => {
-      csvContent += `${row.year},"${row.month_name}",${row.total_amount},${row.total_transactions}\n`;
+      rows.push(
+        `${row.year},"${row.month_name}",${row.total_amount},${row.total_transactions}`,
+      );
     });
 
-    csvContent += "\n";
+    rows.push(""); // Blank spacing line
 
-    // 2. Plan Distribution Section
-    csvContent += "PLAN DISTRIBUTION SUMMARY\n";
-    csvContent +=
-      "Plan,Active Subscribers,Expired Subscribers,Total Subscribers,Active Revenue (NGN),Expired Revenue (NGN),Total Revenue (NGN)\n";
+    // 2. Feature Add-On Distribution Section
+    rows.push("FEATURE ADD-ON DISTRIBUTION");
+    rows.push(
+      "Feature Name,Active Paid Estates,Trial Estates,Expired Estates,Total Estates",
+    );
 
-    (telemetryData.plan_distribution || []).forEach((plan) => {
-      csvContent += `"${plan.plan}",${plan.active_subscribers},${plan.expired_subscribers},${plan.total_subscribers},${plan.active_revenue},${plan.expired_revenue},${plan.total_revenue}\n`;
+    (telemetryData.feature_distribution || []).forEach((feature) => {
+      const label = getFeatureLabel(feature.feature_name);
+      rows.push(
+        `"${label}",${feature.active_estates},${feature.trial_estates || 0},${feature.expired_estates},${feature.total_estates}`,
+      );
     });
 
-    // Trigger Download
-    const encodedUri = encodeURI(csvContent);
+    rows.push(""); // Blank spacing line
+
+    // 3. Regional Breakdown Section
+    rows.push("REGIONAL BREAKDOWN");
+    rows.push("State,Active Estates,Total Revenue (NGN)");
+
+    (telemetryData.regional_breakdown || []).forEach((region) => {
+      rows.push(
+        `"${region.state}",${region.active_estates},${region.total_revenue}`,
+      );
+    });
+
+    // Construct CSV blob and trigger download
+    const csvString = rows.join("\n");
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute(
       "download",
       `billing_analytics_${new Date().toISOString().slice(0, 10)}.csv`,
@@ -255,6 +305,7 @@ export default function AnalyticsView({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -486,30 +537,30 @@ export default function AnalyticsView({
             </p>
 
             <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-lg mb-4">
-              {(["active", "expired", "all"] as DistributionFilter[]).map(
-                (filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setDistributionFilter(filter)}
-                    className={`flex-1 text-[11px] font-medium py-1 rounded-md transition-all capitalize ${
-                      distributionFilter === filter
-                        ? "bg-indigo-600 text-white shadow-sm"
-                        : "text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    {filter}
-                  </button>
-                ),
-              )}
+              {(
+                ["active", "expired", "trial", "all"] as DistributionFilter[]
+              ).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setDistributionFilter(filter)}
+                  className={`flex-1 text-[11px] font-medium py-1 rounded-md transition-all capitalize ${
+                    distributionFilter === filter
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
             </div>
           </div>
 
           <div className="h-44">
-            {formattedPlanDistribution.length > 0 ? (
+            {formattedFeatureDistribution.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={formattedPlanDistribution}
+                    data={formattedFeatureDistribution}
                     dataKey="value"
                     nameKey="name"
                     cx="50%"
@@ -517,7 +568,7 @@ export default function AnalyticsView({
                     innerRadius={45}
                     outerRadius={65}
                   >
-                    {formattedPlanDistribution.map((entry, index) => (
+                    {formattedFeatureDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -527,8 +578,8 @@ export default function AnalyticsView({
                       borderColor: "#334155",
                       borderRadius: "8px",
                     }}
-                    formatter={(val: any, name: any, props: any) => [
-                      `${val} Estates (₦${props.payload.revenue.toLocaleString()})`,
+                    formatter={(val: any, name: any) => [
+                      `${val} Estates`,
                       name,
                     ]}
                   />
@@ -542,7 +593,7 @@ export default function AnalyticsView({
           </div>
 
           <div className="space-y-2 mt-2">
-            {formattedPlanDistribution.map((item) => (
+            {formattedFeatureDistribution.map((item) => (
               <div
                 key={item.name}
                 className="flex items-center justify-between text-xs"
@@ -557,9 +608,6 @@ export default function AnalyticsView({
                 <div className="text-right">
                   <span className="font-bold text-slate-200 block">
                     {item.value} Estates
-                  </span>
-                  <span className="text-[10px] text-slate-400">
-                    ₦{item.revenue.toLocaleString()}
                   </span>
                 </div>
               </div>
