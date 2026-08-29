@@ -10,9 +10,17 @@ import { BillingAnalyticsResponse } from "../services/types";
 import toast from "react-hot-toast";
 import { useUser } from "../UserContext";
 import { showAccessDeniedToast } from "./ManageUsersPage";
+import { useSearchParams } from "next/navigation";
 
 export default function BillingDashboard() {
   const { user } = useUser();
+  const searchParams = useSearchParams();
+  const querySearchName = searchParams.get("search_name");
+
+  // Preserve the initial query param across renders
+  const [initialSearchName, setInitialSearchName] = useState<string | null>(
+    null,
+  );
 
   const hasRootBilling =
     user?.permissions.includes("all-access") ||
@@ -34,6 +42,22 @@ export default function BillingDashboard() {
     "analytics" | "subscriptions" | "pricing"
   >(() => (canViewFinancials ? "analytics" : "pricing"));
 
+  useEffect(() => {
+    if (querySearchName) {
+      setInitialSearchName(querySearchName);
+
+      if (canViewFinancials) {
+        setActiveTab("subscriptions");
+      } else {
+        showAccessDeniedToast();
+      }
+
+      // Remove search_name from URL cleanly without losing internal state
+      const url = new URL(window.location.href);
+      url.searchParams.delete("search_name");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    }
+  }, [querySearchName, canViewFinancials]);
   // Sync activeTab if permissions finish loading asynchronously
   useEffect(() => {
     if (!canViewFinancials && canManagePricing && activeTab === "analytics") {
@@ -155,7 +179,9 @@ export default function BillingDashboard() {
           <AnalyticsView telemetryData={telemetry} loading={loading} />
         )}
         {activeTab === "subscriptions" && canViewFinancials && (
-          <SubscriptionsLedgerView />
+          <SubscriptionsLedgerView
+            searchName={initialSearchName ? initialSearchName : null}
+          />
         )}
         {activeTab === "pricing" && canManagePricing && <PricingConfigView />}
       </div>

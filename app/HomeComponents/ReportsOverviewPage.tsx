@@ -11,6 +11,7 @@ import {
   X,
   UserCheck,
   Shield,
+  Download,
 } from "lucide-react";
 import { getRelativeTime } from "../services/apis";
 import { EstateReport, SecurityUser } from "../services/types";
@@ -94,6 +95,74 @@ export default function ReportsOverviewPage({
     }
   };
 
+  const handleExportCSV = () => {
+    if (!filteredReports.length) return;
+
+    const headers = [
+      "ID",
+      "Subject",
+      "Description",
+      "Classification",
+      "Category",
+      "Status",
+      "Date Created",
+      "Admin Response",
+      "Responded At",
+    ];
+
+    const escapeCSV = (field: any) => {
+      if (field === null || field === undefined) return '""';
+      const stringified = String(field).replace(/"/g, '""');
+      return `"${stringified}"`;
+    };
+
+    const csvRows = [
+      headers.join(","),
+      ...filteredReports.map((report) =>
+        [
+          escapeCSV(report.id),
+          escapeCSV(report.subject),
+          escapeCSV(report.description),
+          escapeCSV(
+            report.type === "GENERAL"
+              ? "RESIDENTIAL"
+              : report.type || "GENERAL",
+          ),
+          escapeCSV(report.category),
+          escapeCSV(report.status || "PENDING"),
+          escapeCSV(
+            report.created_at ? new Date(report.created_at).toISOString() : "",
+          ),
+          escapeCSV(report.admin_response || ""),
+          escapeCSV(
+            report.responded_at
+              ? new Date(report.responded_at).toISOString()
+              : "",
+          ),
+        ].join(","),
+      ),
+    ];
+
+    const blob = new Blob([csvRows.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const sanitizedEstateName = (estatename || "estate")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "_");
+
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `reports_export_${sanitizedEstateName}_${new Date().toISOString().slice(0, 10)}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleViewLogs = () => {
     const canViewLOgs =
       user?.permissions.includes("logs_management") ||
@@ -146,11 +215,22 @@ export default function ReportsOverviewPage({
             </div>
           </div>
         </div>
-        <div>
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            disabled={filteredReports.length === 0}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
+              filteredReports.length === 0
+                ? "bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-200"
+                : "bg-indigo-600 hover:bg-indigo-700 text-white active:scale-[0.98]"
+            }`}
+          >
+            <Download size={14} /> Export CSV Ledger ({filteredReports.length})
+          </button>
           <button
             onClick={handleViewLogs}
-            // disabled={isMutating}
-            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200`}
+            className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200 hover:bg-gray-300 text-slate-800"
           >
             View Logs History
           </button>
@@ -292,7 +372,7 @@ export default function ReportsOverviewPage({
 
       {/* Main Container Data Frame with Isolated Scroll Engine */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="max-h-[500px] overflow-y-auto overflow-x-auto">
+        <div className="max-h-125 overflow-y-auto overflow-x-auto">
           <table className="w-full text-left border-collapse table-fixed">
             <thead className="sticky top-0 bg-slate-50 z-10 shadow-[0_1px_0_0_rgba(241,245,249,1)]">
               <tr className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
@@ -405,7 +485,7 @@ export default function ReportsOverviewPage({
                       <td className="p-4">
                         {report.admin_response ? (
                           <div className="space-y-1">
-                            <p className="text-[11px] text-slate-700 italic break-words line-clamp-2">
+                            <p className="text-[11px] text-slate-700 italic wrap-break-word line-clamp-2">
                               &quot;{report.admin_response}&quot;
                             </p>
                             {report.responded_at && (

@@ -69,18 +69,18 @@ export default function NotificationCard({ item, onDelete }: Props) {
   };
 
   return (
-    <div className="p-6 bg-white border border-slate-200/80 rounded-2xl shadow-sm space-y-4 font-sans text-slate-800 relative group">
-      <div className="flex flex-col sm:flex-row items-start gap-4 justify-between">
+    <div className="p-5 bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl shadow-sm hover:shadow transition-all space-y-3.5 font-sans text-slate-800 relative group">
+      <div className="flex flex-col sm:flex-row items-start gap-3.5 justify-between">
         {/* Left Informational Core Block */}
-        <div className="flex items-start gap-4 flex-1">
+        <div className="flex items-start gap-3.5 flex-1">
           {/* Dynamic Telemetry Icon Frame */}
           <div
-            className={`p-3 rounded-xl border ${theme.bg} ${theme.color} shrink-0`}
+            className={`p-2.5 rounded-xl border shadow-inner ${theme.bg} ${theme.color} shrink-0`}
           >
-            <Icon size={20} />
+            <Icon size={18} />
           </div>
 
-          <div className="space-y-1 flex-1">
+          <div className="space-y-0.5 flex-1">
             {/* Header Telemetry Tags Row */}
             <div className="flex flex-wrap items-center gap-2">
               <span
@@ -88,15 +88,15 @@ export default function NotificationCard({ item, onDelete }: Props) {
               >
                 {theme.label}
               </span>
-              <span className="text-slate-300 font-mono text-xs">|</span>
+              <span className="text-slate-300 font-mono text-xs">•</span>
               <span className="text-[11px] font-mono font-medium text-slate-400 flex items-center gap-1">
-                <Clock size={12} />
+                <Clock size={11} className="text-slate-400" />
                 {formatDate(item.created_at)}
               </span>
             </div>
 
             {/* Bold Structural Dashboard Headline */}
-            <h4 className="text-base font-black text-slate-900 tracking-tight leading-snug">
+            <h4 className="text-sm sm:text-base font-black text-slate-900 tracking-tight leading-snug">
               {item.title}
             </h4>
           </div>
@@ -105,21 +105,21 @@ export default function NotificationCard({ item, onDelete }: Props) {
         {/* Action Trash Vector Anchor */}
         <div className="sm:opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0 self-end sm:self-start">
           <button
-            className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-transparent hover:border-rose-100 rounded-xl transition-all"
+            className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-transparent hover:border-rose-200/60 rounded-xl transition-all"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(item.id);
             }}
           >
-            <Trash2 size={16} />
+            <Trash2 size={15} />
           </button>
         </div>
       </div>
 
       {/* Structured Inner Payload Block */}
-      <div className="p-4 border border-slate-100 rounded-xl bg-slate-50/50 flex items-start gap-2.5">
+      <div className="p-3.5 border border-slate-200/60 rounded-xl bg-slate-900/2 flex items-start gap-2.5">
         <Info size={14} className="text-slate-400 mt-0.5 shrink-0" />
-        <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed break-words w-full">
+        <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed wrap-break-word w-full">
           {item.message}
         </p>
       </div>

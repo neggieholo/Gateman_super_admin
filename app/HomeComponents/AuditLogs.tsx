@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
   ChevronRight,
   Info,
+  Download,
 } from "lucide-react";
 import { AuditLogEntry, EstatesListRow } from "../services/types";
 import { mockAuditLogs } from "../services/mock_data";
@@ -19,13 +20,14 @@ import {
   fetchSpecifiedLogs,
   fetchUniversalLogs,
 } from "../services/apis_estates";
+import toast from "react-hot-toast";
 
 interface SuperadminAuditLogsPageProps {
   estate_id?: string;
   id?: string;
   name?: string;
-  type?:string;
-  target_id?:string;
+  type?: string;
+  target_id?: string;
   role?: string;
   all?: boolean;
   onBack: () => void;
@@ -43,7 +45,7 @@ export default function AuditLogsPage({
   all,
   role,
 }: SuperadminAuditLogsPageProps) {
-  const { estatesList } = useUser();
+  const { estatesList, user } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [urgencyFilter, setUrgencyFilter] = useState<UrgencyFilter>("ALL");
   const [startDate, setStartDate] = useState("");
@@ -82,7 +84,7 @@ export default function AuditLogsPage({
           payload = await fetchSpecifiedLogs(id);
         } else if (canFetchAll) {
           payload = await fetchAllLogs(estate_id, role);
-        }  else if (canFetchSection) {
+        } else if (canFetchSection) {
           payload = await fetchSectionLogs(estate_id);
         } else if (canFetchUniversal) {
           payload = await fetchUniversalLogs();
@@ -97,7 +99,7 @@ export default function AuditLogsPage({
               (log) => log.target_resource === type,
             );
           }
-          
+
           if (target_id) {
             extractedLogs = extractedLogs.filter(
               (log) => log.target_id === target_id,
@@ -152,6 +154,91 @@ export default function AuditLogsPage({
       return matchesText && matchesUrgency && matchesDates;
     });
   }, [logs, searchQuery, urgencyFilter, startDate, endDate]);
+
+  const handleDownloadCSV = () => {
+    if (filteredLogs.length === 0) return;
+
+    const canDownloadLogs =
+      user?.permissions?.includes("logs_management") ||
+      user?.permissions?.includes("download_user_logs") ||
+      user?.permissions?.includes("all-access");
+
+    if (!canDownloadLogs) {
+      toast.error(
+        `Access Denied. You do not hold the authorized credentials required for this operation.`,
+        {
+          id: "unauthorized-audit-logs-export",
+          duration: 4000,
+          position: "top-center",
+          style: {
+            fontWeight: "bold",
+            borderRadius: "12px",
+            background: "#1E293B",
+            color: "#FFFFFF",
+            maxWidth: "450px",
+          },
+        },
+      );
+      return;
+    }
+
+    const headers = [
+      "Timestamp",
+      "Estate",
+      "Urgency",
+      "Operator Name",
+      "Operator Role",
+      "Action Type",
+      "Target Resource",
+      "Description",
+      "IP Address",
+      "User Agent",
+    ];
+
+    const csvRows = filteredLogs.map((log) => {
+      const dateObj = new Date(log.created_at);
+      const timestamp = !isNaN(dateObj.getTime())
+        ? `${dateObj.toLocaleDateString("en-GB")} ${dateObj.toLocaleTimeString(
+            "en-GB",
+          )}`
+        : "---";
+
+      const estateName = log.estate_id
+        ? estatesList.find((e) => e.id === log.estate_id)?.name ||
+          "UNKNOWN ESTATE"
+        : "GLOBAL SYSTEM ENGINE";
+
+      return [
+        `"${timestamp}"`,
+        `"${estateName.replace(/"/g, '""')}"`,
+        `"${log.urgency || "LOW"}"`,
+        `"${(log.user_name || "System Loop").replace(/"/g, '""')}"`,
+        `"${(log.user_role || "SYSTEM").replace(/"/g, '""')}"`,
+        `"${log.action_type || ""}"`,
+        `"${log.target_resource || ""}"`,
+        `"${(log.description || "").replace(/"/g, '""')}"`,
+        `"${log.ip_address || "0.0.0.0"}"`,
+        `"${(log.user_agent || "unknown").replace(/"/g, '""')}"`,
+      ].join(",");
+    });
+
+    const csvContent = [headers.join(","), ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    const fileSuffix =
+      startDate || endDate
+        ? `_range_${startDate}_to_${endDate}`
+        : "_full_ledger";
+    link.setAttribute("href", url);
+    link.setAttribute("download", `gateman_audit_logs${fileSuffix}.csv`);
+    link.style.visibility = "hidden";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const renderUrgencyBadge = (urgency: "HIGH" | "MEDIUM" | "LOW" | "INFO") => {
     if (urgency === "HIGH") {
@@ -214,10 +301,22 @@ export default function AuditLogsPage({
               Context Scope:
             </span>
             <span className="font-mono bg-slate-100 px-2 py-0.5 rounded-lg text-slate-700 font-bold">
-              VIEWING {type ? `${type.toUpperCase()} ` : ''}LOGS FOR {name}
+              VIEWING {type ? `${type.toUpperCase()} ` : ""}LOGS FOR {name}
             </span>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={handleDownloadCSV}
+          disabled={filteredLogs.length === 0 || loading}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-oswald font-black uppercase tracking-wider transition-all shadow-sm ${
+            filteredLogs.length === 0 || loading
+              ? "bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-200"
+              : "bg-indigo-600 hover:bg-indigo-700 text-white active:scale-[0.98]"
+          }`}
+        >
+          <Download size={14} /> Export CSV Ledger ({filteredLogs.length})
+        </button>
       </div>
 
       {/* Control Filters Block */}

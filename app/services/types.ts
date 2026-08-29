@@ -373,6 +373,64 @@ export interface EstatesDirectoryResponse {
   estates: DashboardEstateNode[];
 }
 
+export interface Plan {
+  is_trial: boolean;
+  selected_add_ons: string[];
+}
+
+export interface EstateProfile {
+  id: string;
+  name: string;
+  estate_code: string;
+  address: string;
+  state: string;
+  lga: string;
+  town: string;
+  plan: Plan;
+  payment_items: string[];
+  bank_name: string | null;
+  bank_code: string | null;
+  bank_account_number: string | null;
+  bank_account_name: string | null;
+  emergency_contacts: EmergencyContact[];
+  payment_type?: string | undefined;
+  external_api_url: string | null;
+  subscription_expiry?: string;
+  created_at: string;
+}
+
+export interface SendNotificationPayload {
+  title: string;
+  message: string;
+}
+
+export interface NotificationResponse {
+  success: boolean;
+  message: string;
+}
+
+export type StatusFilter = "ALL" | "pending" | "verified" | "rejected";
+
+export type PaymentStatus = "pending" | "verified" | "rejected" | string;
+
+export interface PaymentLog {
+  id: string; // uuid
+  resident_id: string | null;
+  estate_id: string | null;
+  amount: number; // numeric mapped to JS/TS number
+  transaction_reference: string | null;
+  receipt_url: string | null;
+  status: PaymentStatus; // default: 'pending'
+  payment_type: string | null; // e.g., 'transfer', 'card', etc.
+  created_at: string; // ISO timestamp string from backend
+  verified_at: string | null; // ISO timestamp string from backend
+  verified_by: string | null; // uuid
+  category: string | null;
+  notes: string | null;
+  resident_name: string | null;
+  payment_date: string | null; // ISO timestamp string with timezone
+}
+
 export interface EstateDetailedContext extends DashboardEstateNode {
   gatepasses: any[];
   posts: any[];
@@ -383,9 +441,9 @@ export interface EstateDetailedContext extends DashboardEstateNode {
   vendors: Vendor[];
   service_requests: any[];
   admins: AdminUser[];
-  payment_logs: any[];
+  payment_logs: PaymentLog[];
   root_admin_email: string;
-  estate: any;
+  estate: EstateProfile;
 }
 
 export interface EstateDetailsResponse {
@@ -762,6 +820,7 @@ export interface PaymentLedgerItem {
   gateway_metadata?: Record<string, any>;
   created_at: string;
 }
+
 
 export interface SubscriptionsResponse {
   success: boolean;

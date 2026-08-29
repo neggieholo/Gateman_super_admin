@@ -2,7 +2,6 @@ import React, { useState, useMemo, useCallback } from "react";
 import {
   Search,
   Calendar,
-  Users,
   DollarSign,
   X,
   CheckCircle,
@@ -11,9 +10,12 @@ import {
   MapPin,
   CreditCard,
   Clock,
+  Download,
 } from "lucide-react";
 import { LocationBooking, EstateFacility } from "../services/types";
 import { formatDate, formatTime } from "../services/apis";
+import { useUser } from "../UserContext";
+import toast from "react-hot-toast";
 
 interface LocationBookingsOverviewPageProps {
   events: LocationBooking[];
@@ -36,6 +38,7 @@ export default function LocationBookingsOverviewPage({
   estatename,
   onBack,
 }: LocationBookingsOverviewPageProps) {
+  const {user} = useUser()
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [selectedEvent, setSelectedEvent] = useState<LocationBooking | null>(
@@ -92,6 +95,85 @@ export default function LocationBookingsOverviewPage({
       return matchesText && matchesStatus;
     });
   }, [events, searchQuery, statusFilter]);
+
+  const handleDownloadCSV = () => {
+    if (filteredEvents.length === 0) return;
+
+    const canDownloadBookings =
+      user?.permissions?.includes("bookings_management") ||
+      user?.permissions?.includes("download_reports") ||
+      user?.permissions?.includes("all-access");
+
+    if (!canDownloadBookings) {
+      toast.error(
+        "Access Denied. You do not hold the authorized credentials required for exporting booking records.",
+        {
+          id: "unauthorized-bookings-export",
+          duration: 4000,
+          position: "top-center",
+          style: {
+            fontWeight: "bold",
+            borderRadius: "12px",
+            background: "#1E293B",
+            color: "#FFFFFF",
+            maxWidth: "450px",
+          },
+        },
+      );
+      return;
+    }
+
+    const headers = [
+      "Resident Name",
+      "Venue Name",
+      "Resolved Location ID",
+      "Status",
+      "Start Date",
+      "End Date",
+      "Time Window",
+      "Payment Type",
+      "Total Amount (NGN)",
+    ];
+
+    const csvRows = filteredEvents.map((ev) => {
+      const resolvedLoc = resolveLocationInfo(ev.venue_id);
+      const venueDisplay = resolvedLoc
+        ? resolvedLoc.name
+        : ev.venue_name || "Unassigned Venue";
+      const timeWindow = `${ev.start_time?.slice(0, 5) || "00:00"} - ${
+        ev.end_time?.slice(0, 5) || "00:00"
+      }`;
+
+      return [
+        `"${(ev.resident_name || "Unknown Resident").replace(/"/g, '""')}"`,
+        `"${venueDisplay.replace(/"/g, '""')}"`,
+        `"${ev.venue_id || "N/A"}"`,
+        `"${ev.status}"`,
+        `"${ev.start_date}"`,
+        `"${ev.end_date}"`,
+        `"${timeWindow}"`,
+        `"${ev.is_paid ? "PAID" : "FREE"}"`,
+        `"${parseFloat(String(ev.total_amount || 0)).toFixed(2)}"`,
+      ].join(",");
+    });
+
+    const csvContent = [headers.join(","), ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    const sanitizedEstate = estatename.toLowerCase().replace(/[^a-z0-9]/g, "_");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `location_bookings_${sanitizedEstate}_ledger.csv`,
+    );
+    link.style.visibility = "hidden";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const renderStatusBadge = (event: LocationBooking) => {
     switch (event.status) {
@@ -165,6 +247,18 @@ export default function LocationBookingsOverviewPage({
             </span>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={handleDownloadCSV}
+          disabled={filteredEvents.length === 0}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
+            filteredEvents.length === 0
+              ? "bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-200"
+              : "bg-indigo-600 hover:bg-indigo-700 text-white active:scale-[0.98]"
+          }`}
+        >
+          <Download size={14} /> Export CSV Ledger ({filteredEvents.length})
+        </button>
       </div>
 
       {/* Control Filters Block */}
@@ -189,21 +283,28 @@ export default function LocationBookingsOverviewPage({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 pt-1">
-          {(["ALL", "PENDING", "PAYMENT PENDING", "PAYMENT SUBMITTED", "APPROVED", "REJECTED"] as StatusFilter[]).map(
-            (tab) => (
-              <button
-                key={tab}
-                onClick={() => setStatusFilter(tab)}
-                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold tracking-wide uppercase transition-all ${
-                  statusFilter === tab
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "bg-slate-50 text-slate-500 hover:bg-slate-100"
-                }`}
-              >
-                {tab}
-              </button>
-            ),
-          )}
+          {(
+            [
+              "ALL",
+              "PENDING",
+              "PAYMENT PENDING",
+              "PAYMENT SUBMITTED",
+              "APPROVED",
+              "REJECTED",
+            ] as StatusFilter[]
+          ).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setStatusFilter(tab)}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold tracking-wide uppercase transition-all ${
+                statusFilter === tab
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -300,7 +401,7 @@ export default function LocationBookingsOverviewPage({
             <div className="flex items-center justify-between border-b border-slate-100 p-6 bg-white shrink-0">
               <div>
                 <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                  Event Info
+                  Booking Info
                 </h2>
               </div>
               <button
@@ -438,7 +539,7 @@ export default function LocationBookingsOverviewPage({
                     <span className="font-mono font-bold text-slate-800">
                       ₦
                       {parseFloat(
-                        (selectedEvent.total_amount).toString() || "0",
+                        selectedEvent.total_amount.toString() || "0",
                       ).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                   </div>

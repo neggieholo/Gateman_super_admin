@@ -6,8 +6,10 @@ import {
   EstateDetailsResponse,
   EstatesDirectoryResponse,
   ExtensionResponse,
+  NotificationResponse,
   PricingConfigResponse,
   SecurityUser,
+  SendNotificationPayload,
   SubscriptionPricingConfig,
   SubscriptionsResponse,
   UpdatePricingResponse,
@@ -46,6 +48,7 @@ export async function getEstateDetailsContext(
   }
 
   const data: EstateDetailsResponse = await res.json();
+  console.log('Location bookings:', data.estate.bookings)
   console.log(
     `Received deep instrumentation dataset for structural node [${estateId}]:`,
     data,
@@ -558,3 +561,45 @@ export const billingApi = {
     }
   },
 };
+
+export async function sendEstateNotification(
+  estateId: string | number,
+  payload: SendNotificationPayload,
+): Promise<NotificationResponse> {
+  const res = await fetch(`/api/master/estates/${estateId}/notify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to send estate notification");
+  }
+
+  return await res.json();
+}
+
+/**
+ * Broadcast a notification to root admins across all active estates
+ */
+export async function broadcastAllEstatesNotification(
+  payload: SendNotificationPayload,
+): Promise<NotificationResponse> {
+  const res = await fetch("/api/master/estates/notify-all", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(
+      errorData.message || "Failed to broadcast system-wide alert",
+    );
+  }
+
+  return await res.json();
+}

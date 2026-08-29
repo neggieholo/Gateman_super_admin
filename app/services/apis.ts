@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   FetchAdminsResponse,
@@ -452,7 +453,7 @@ export async function deleteAdminProfileApi(userId: string) {
 export const fetchNotifications =
   async (): Promise<FetchNotificationsResponse> => {
     try {
-      const res = await fetch("/api/notifications", {
+      const res = await fetch("/api/master/notifications", {
         method: "GET",
         credentials: "include",
       });
@@ -464,7 +465,7 @@ export const fetchNotifications =
 
 export const markAllAsReadApi = async () => {
   try {
-    const res = await fetch("/api/notifications/read-all", {
+    const res = await fetch("/api/master/notifications/read-all", {
       method: "PUT",
       credentials: "include",
     });
@@ -476,7 +477,7 @@ export const markAllAsReadApi = async () => {
 
 export const deleteNotificationApi = async (id: string) => {
   try {
-    const res = await fetch(`/api/notifications/${id}`, {
+    const res = await fetch(`/api/master/notifications/${id}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -490,7 +491,7 @@ export const deleteNotificationApi = async (id: string) => {
 
 export const deleteAllNotificationsApi = async () => {
   try {
-    const response = await fetch("/api/notifications/delete-all", {
+    const response = await fetch("/api/master/notifications/delete-all", {
       method: "DELETE",
       // Fix: Ensure this is exactly the string "include"
       credentials: "include",

@@ -18,9 +18,9 @@ const HomeNavbar = () => {
         setMounted(true);
         setIsLoading(true);
         const res = await checkSession();
-        console.log('Session check data:', res)
+        console.log("Session check data:", res);
 
-        if (!res.success || res?.user?.role !== 'SUPER_ADMIN') {
+        if (!res.success || res?.user?.role !== "SUPER_ADMIN") {
           console.warn("Session invalid, redirecting...");
           window.location.replace("/");
         } else {
@@ -55,16 +55,15 @@ const HomeNavbar = () => {
 
       {/* ACTION CONTROLS */}
       <div className="flex items-center gap-8">
-        {/* NOTIFICATION HUB */}
         <div className="flex items-center gap-2">
-          {/* <div className="indicator group">
+          <div className="indicator group">
             {badgeCount > 0 && (
               <span className="indicator-item badge badge-primary badge-sm text-white font-bold border-white border-2 scale-110 group-hover:animate-bounce">
                 {badgeCount}
               </span>
             )}
             <button
-              className="btn btn-ghost btn-circle bg-slate-50 hover:bg-primary/10 hover:text-primary transition-all duration-300 shadow-sm border mx-2 border-slate-100"
+              className="btn btn-ghost btn-circle bg-gm-charcoal/40 hover:bg-secondary/10 hover:text-primary transition-all duration-300 shadow-sm border mx-4 border-slate-100"
               onClick={() => router.push("/home/notifications")}
             >
               <svg
@@ -82,7 +81,7 @@ const HomeNavbar = () => {
                 />
               </svg>
             </button>
-          </div> */}
+          </div>
 
           <button
             className="btn btn-ghost btn-circle bg-gm-charcoal/40 hover:bg-secondary/10 hover:text-secondary transition-all duration-300 shadow-sm border mx-4 border-slate-100"

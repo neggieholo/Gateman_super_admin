@@ -1,10 +1,44 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @next/next/no-img-element */
-import React, { useState } from "react";
-import { X, History, UserCheck, CalendarDays } from "lucide-react";
-import { Invitation } from "../services/types";
-import AuditLogsPage from "./AuditLogs";
-import { showAccessDeniedToast } from "./ManageUsersPage";
+"use client";
+
+import React, { useState, useMemo } from "react";
+import {
+  X,
+  UserCheck,
+  CalendarDays,
+  History,
+  Download,
+  Search,
+} from "lucide-react";
+import { toast } from "react-hot-toast";
 import { useUser } from "../UserContext";
+// import AuditLogsPage from "./AuditLogs";
+
+
+// Types & Interfaces
+export interface Invitation {
+  id: string;
+  guest_name: string;
+  guest_phone?: string;
+  guest_image_url?: string;
+  access_code: string;
+  invite_type?: string;
+  staff_position?: string;
+  start_date: string;
+  end_date?: string;
+  start_time?: string;
+  end_time?: string;
+  status: "pending" | "checked_in" | "checked_out" | "overstayed" | string;
+  is_cancelled?: boolean;
+  is_activated?: boolean;
+  resident_name?: string;
+  estate_name?: string;
+  actual_checkin_date?: string;
+  actual_checkout_date?: string;
+  permitted_days?: number[];
+  excluded_dates?: string[];
+}
 
 interface GatePassesOverviewPageProps {
   passes: Invitation[];
@@ -14,19 +48,40 @@ interface GatePassesOverviewPageProps {
 }
 
 export default function GatePassesOverviewPage({
-  passes: initialPasses,
+  passes: initialPasses = [],
   estate_id,
   estatename,
   onBack,
 }: GatePassesOverviewPageProps) {
   const { user } = useUser();
-  const [passesList, setPassesList] = useState<Invitation[]>(initialPasses);
+  const [passesList] = useState<Invitation[]>(initialPasses);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedPass, setSelectedPass] = useState<Invitation | null>(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [viewAllLogs, setViewAllLogs] = useState(false);
   const [viewIndividualLogs, setViewIndividualLogs] = useState(false);
 
-  // 🚨 Dynamic status evaluator mapping algorithm matching your established engine setup
+  // Helper toast notification for denied permissions
+  const showAccessDeniedToast = (message?: string) => {
+    toast.error(
+      message ||
+        "Access Denied. You do not hold authorized security clearance.",
+      {
+        id: "unauthorized-access-toast",
+        duration: 4000,
+        position: "top-center",
+        style: {
+          fontWeight: "bold",
+          borderRadius: "12px",
+          background: "#1E293B",
+          color: "#FFFFFF",
+          maxWidth: "450px",
+        },
+      },
+    );
+  };
+
+  // Status evaluator mapping algorithm
   const getStatusStyle = (pass: Invitation) => {
     if (pass.is_cancelled) {
       return "bg-rose-50 text-rose-700 border border-rose-200";
@@ -65,20 +120,106 @@ export default function GatePassesOverviewPage({
     }
   };
 
-  // Convert day numerical map array representation to localized text layout
-  const formatPermittedDays = (days: number[]) => {
+  const formatPermittedDays = (days?: number[]) => {
     if (!days || days.length === 0) return "All Framework Cycles";
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     return days.map((d) => dayNames[d] || d).join(", ");
   };
 
-  const handleViewLogs = (all: boolean) => {
-    const canViewLOgs =
-      user?.permissions.includes("logs_management") ||
-      user?.permissions.includes("view_estate_logs") ||
-      user?.permissions.includes("all-access");
+  // Filtered passes calculation
+  const filteredPasses = useMemo(() => {
+    return passesList.filter((pass) => {
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return true;
 
-    if (!canViewLOgs) {
+      return (
+        pass.guest_name?.toLowerCase().includes(q) ||
+        pass.access_code?.toLowerCase().includes(q) ||
+        pass.guest_phone?.toLowerCase().includes(q) ||
+        pass.resident_name?.toLowerCase().includes(q) ||
+        pass.invite_type?.toLowerCase().includes(q)
+      );
+    });
+  }, [passesList, searchQuery]);
+
+  // Dynamic CSV Export Handler
+  const handleDownloadCSV = () => {
+    if (filteredPasses.length === 0) return;
+
+    const canExportPasses =
+      user?.permissions?.includes("logs_management") ||
+      user?.permissions?.includes("download_reports") ||
+      user?.permissions?.includes("all-access");
+
+    if (!canExportPasses) {
+      showAccessDeniedToast(
+        "Access Denied. You do not hold authorized clearance for exporting security gate pass ledgers.",
+      );
+      return;
+    }
+
+    const headers = [
+      "Guest Name",
+      "Access Code",
+      "Guest Phone",
+      "Invite Type",
+      "Staff Position",
+      "Status State",
+      "Resident Host",
+      "Start Date",
+      "End Date",
+      "Time Window",
+      "Actual Check-In",
+      "Actual Check-Out",
+    ];
+
+    const csvRows = filteredPasses.map((pass) => {
+      const computedStatus = getComputedStatusLabel(pass);
+      const timeWindow = `${pass.start_time?.slice(0, 5) || "00:00"} - ${
+        pass.end_time?.slice(0, 5) || "00:00"
+      }`;
+
+      return [
+        `"${(pass.guest_name || "Unknown Guest").replace(/"/g, '""')}"`,
+        `"${pass.access_code || "N/A"}"`,
+        `"${pass.guest_phone || "N/A"}"`,
+        `"${(pass.invite_type || "one_time").replace(/"/g, '""')}"`,
+        `"${(pass.staff_position || "N/A").replace(/"/g, '""')}"`,
+        `"${computedStatus}"`,
+        `"${(pass.resident_name || "N/A").replace(/"/g, '""')}"`,
+        `"${pass.start_date || ""}"`,
+        `"${pass.end_date || pass.start_date || ""}"`,
+        `"${timeWindow}"`,
+        `"${pass.actual_checkin_date || "PENDING"}"`,
+        `"${pass.actual_checkout_date || "PENDING"}"`,
+      ].join(",");
+    });
+
+    const csvContent = [headers.join(","), ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    const sanitizedEstate = (estatename || "estate")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "_");
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", `gate_passes_${sanitizedEstate}_ledger.csv`);
+    link.style.visibility = "hidden";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleViewLogs = (all: boolean) => {
+    const canViewLogs =
+      user?.permissions?.includes("logs_management") ||
+      user?.permissions?.includes("view_estate_logs") ||
+      user?.permissions?.includes("all-access");
+
+    if (!canViewLogs) {
       showAccessDeniedToast();
       return;
     }
@@ -89,38 +230,40 @@ export default function GatePassesOverviewPage({
     }
   };
 
-  if (viewAllLogs) {
-    return (
-      <AuditLogsPage
-        estate_id={estate_id}
-        name={`${estatename?.toUpperCase() || "UNKNOWN ESTATE"}`}
-        all={true}
-        type="gatePasses"
-        onBack={() => setViewAllLogs(false)}
-      />
-    );
-  }
+  // if (viewAllLogs) {
+  //   return (
+  //     <AuditLogsPage
+  //       estate_id={estate_id}
+  //       name={`${estatename?.toUpperCase() || "UNKNOWN ESTATE"}`}
+  //       all={true}
+  //       type="gatePasses"
+  //       onBack={() => setViewAllLogs(false)}
+  //     />
+  //   );
+  // }
 
-  if (viewIndividualLogs && selectedPass) {
-    return (
-      <AuditLogsPage
-        estate_id={estate_id}
-        all={true}
-        type="invitations"
-        target_id={selectedPass.id}
-        name={`${selectedPass?.guest_name.toUpperCase()} GUEST`}
-        onBack={() => {
-          setViewIndividualLogs(false);
-          setSelectedPass(null);
-        }}
-      />
-    );
-  }
+  // if (viewIndividualLogs && selectedPass) {
+  //   return (
+  //     <AuditLogsPage
+  //       estate_id={estate_id}
+  //       all={true}
+  //       type="invitations"
+  //       target_id={selectedPass.id}
+  //       name={`${selectedPass?.guest_name.toUpperCase()} GUEST`}
+  //       onBack={() => {
+  //         setViewIndividualLogs(false);
+  //         setSelectedPass(null);
+  //       }}
+  //     />
+  //   );
+  // }
+
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen animate-fadeIn">
       <div className="mx-auto space-y-6">
-        <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-          <div className="flex  flex-col items-start">
+        {/* Header Block */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="flex flex-col items-start gap-2">
             {onBack && (
               <button
                 onClick={onBack}
@@ -143,14 +286,48 @@ export default function GatePassesOverviewPage({
               </div>
             </div>
           </div>
-          <div>
+
+          <div className="flex items-center gap-2">
+            {/* EXPORT ACTION BUTTON */}
             <button
+              type="button"
+              onClick={handleDownloadCSV}
+              disabled={filteredPasses.length === 0}
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold tracking-wide uppercase transition-all shadow-sm ${
+                filteredPasses.length === 0
+                  ? "bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-200"
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white active:scale-[0.98]"
+              }`}
+            >
+              <Download size={14} /> Export CSV ({filteredPasses.length})
+            </button>
+
+            {/* <button
               onClick={() => handleViewLogs(true)}
-              // disabled={isMutating}
-              className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-200`}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/60"
             >
               View Logs History
-            </button>
+            </button> */}
+          </div>
+        </div>
+
+        {/* Search Parameter Inputs */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+          <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider block mb-1">
+            Search Gate Ledger
+          </label>
+          <div className="relative">
+            <Search
+              size={14}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              type="text"
+              placeholder="Search by guest name, access code, phone, resident..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:border-indigo-500 outline-none font-medium transition-all"
+            />
           </div>
         </div>
 
@@ -168,22 +345,22 @@ export default function GatePassesOverviewPage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
-                {passesList.length === 0 ? (
+                {filteredPasses.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={5}
                       className="p-8 text-center italic text-slate-400 bg-white"
                     >
-                      No active security pass keys logged in this node
-                      environment.
+                      No active security pass keys logged matching current
+                      parameters.
                     </td>
                   </tr>
                 ) : (
-                  passesList.map((pass) => (
+                  filteredPasses.map((pass) => (
                     <tr
                       key={pass.id}
                       onClick={() => setSelectedPass(pass)}
-                      className="hover:bg-slate-50/50 transition-colors"
+                      className="hover:bg-slate-50/50 transition-colors cursor-pointer"
                     >
                       {/* Guest Identification Bundle */}
                       <td className="p-4">
@@ -242,7 +419,9 @@ export default function GatePassesOverviewPage({
                               "en-GB",
                             )}
                             {pass.end_date &&
-                              ` → ${new Date(pass.end_date).toLocaleDateString("en-GB")}`}
+                              ` → ${new Date(pass.end_date).toLocaleDateString(
+                                "en-GB",
+                              )}`}
                           </p>
                           <p className="text-slate-400 text-[10px]">
                             ⏰ {pass.start_time?.slice(0, 5)} -{" "}
@@ -254,7 +433,9 @@ export default function GatePassesOverviewPage({
                       {/* Evaluated Operational Status Indicators */}
                       <td className="p-4">
                         <span
-                          className={`text-[9px] font-black px-2 py-0.5 rounded-md tracking-wider ${getStatusStyle(pass)}`}
+                          className={`text-[9px] font-black px-2 py-0.5 rounded-md tracking-wider ${getStatusStyle(
+                            pass,
+                          )}`}
                         >
                           {getComputedStatusLabel(pass)}
                         </span>
@@ -303,7 +484,9 @@ export default function GatePassesOverviewPage({
                       setShowImagePreview(true);
                     }
                   }}
-                  className="w-36 h-36 bg-slate-200 rounded-xl border border-slate-300 shrink-0 overflow-hidden flex items-center justify-center"
+                  className={`w-28 h-28 bg-slate-200 rounded-xl border border-slate-300 shrink-0 overflow-hidden flex items-center justify-center ${
+                    selectedPass.guest_image_url ? "cursor-zoom-in" : ""
+                  }`}
                 >
                   {selectedPass.guest_image_url ? (
                     <img
@@ -325,7 +508,9 @@ export default function GatePassesOverviewPage({
                     {selectedPass.guest_phone || "No phone linked."}
                   </p>
                   <span
-                    className={`inline-block text-[9px] font-black px-2 py-0.5 rounded mt-1 ${getStatusStyle(selectedPass)}`}
+                    className={`inline-block text-[9px] font-black px-2 py-0.5 rounded mt-1 ${getStatusStyle(
+                      selectedPass,
+                    )}`}
                   >
                     {getComputedStatusLabel(selectedPass)}
                   </span>
@@ -409,24 +594,10 @@ export default function GatePassesOverviewPage({
               </div>
             </div>
 
-            <div className="w-full p-3 flex justify-center">
+            {/* Action Bottom Layout */}
+            <div className="pt-6 border-t border-slate-100 space-y-2 mt-6">
               <button
                 onClick={() => handleViewLogs(false)}
-                className="p-1.5 hover:bg-slate-100 rounded-lg border text-slate-500 hover:text-slate-800 transition-all inline-flex items-center gap-1 font-bold text-[14px]"
-              >
-                <History size={14} />
-                <span>View Logs</span>
-              </button>
-            </div>
-
-            {/* Action Bottom Layout */}
-            <div className="pt-4 border-t border-slate-100 space-y-2">
-              <button
-                onClick={() => {
-                  console.log(
-                    `Deep telemetry logs requested placeholder for sequence code: ${selectedPass.access_code}`,
-                  );
-                }}
                 className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center justify-center gap-2 shadow-sm"
               >
                 <History size={14} />
@@ -442,13 +613,14 @@ export default function GatePassesOverviewPage({
           </div>
         </div>
       )}
+
+      {/* Expanded Avatar Lightbox Modal */}
       {showImagePreview && selectedPass?.guest_image_url && (
         <div
           onClick={() => setShowImagePreview(false)}
           className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/80 backdrop-blur-md cursor-zoom-out animate-in fade-in duration-150"
         >
           <div className="relative max-w-[90vw] max-h-[85vh] animate-in zoom-in-95 duration-150">
-            {/* Close button indicator helper for touch screens */}
             <button
               onClick={() => setShowImagePreview(false)}
               className="absolute -top-12 right-0 p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all border border-white/10"
@@ -459,7 +631,7 @@ export default function GatePassesOverviewPage({
               src={selectedPass.guest_image_url}
               alt={`${selectedPass.guest_name} expanded avatar`}
               className="max-w-full max-h-[80vh] rounded-3xl object-contain border border-slate-800 shadow-2xl select-none"
-              onClick={(e) => e.stopPropagation()} // Stop overlay click collapse when clicking image directly
+              onClick={(e) => e.stopPropagation()}
             />
           </div>
         </div>

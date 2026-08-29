@@ -112,7 +112,7 @@ export default function ResidentsOverviewPage({
     if (all || estateId) {
       loadResidentsData();
     }
-  }, [estateId, all]);
+  }, [estateId, all, canViewResidents]);
 
   // Filter list records against type filter and search query string parameters
   const filteredResidents = residents.filter((res) => {

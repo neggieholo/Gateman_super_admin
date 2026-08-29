@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { billingApi } from "../services/apis_estates";
 import { EstateSubscription, PaymentLedgerItem } from "../services/types";
 import toast from "react-hot-toast";
 import { useUser } from "../UserContext";
 import { showAccessDeniedToast } from "./ManageUsersPage";
 import { ADDON_MODULES } from "../services/data";
-
+import { Download } from "lucide-react";
 
 const PLAN_OPTIONS = [
   { id: "ALL", label: "All Plans" },
@@ -17,7 +17,13 @@ const PLAN_OPTIONS = [
   })),
 ];
 
-export default function SubscriptionsLedgerView() {
+interface SubscriptionsProps {
+  searchName: string | null;
+}
+
+export default function SubscriptionsLedgerView({
+  searchName,
+}: SubscriptionsProps) {
   const { user } = useUser();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +46,7 @@ export default function SubscriptionsLedgerView() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
 
-  // Fetch Data on Mount
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -53,11 +58,18 @@ export default function SubscriptionsLedgerView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, [user]);
+  }, [loadData]);
+
+  // 2. Sync searchName prop directly to searchQuery whenever searchName changes
+  useEffect(() => {
+    if (searchName !== null && searchName !== undefined) {
+      setSearchQuery(searchName.toLowerCase());
+    }
+  }, [searchName]);
 
   const matchPlanFilter = (planRaw: any, selectedFilter: string): boolean => {
     if (selectedFilter === "ALL") return true;
@@ -172,6 +184,146 @@ export default function SubscriptionsLedgerView() {
     }
   };
 
+  const handleExportCSV = () => {
+    const isSubscriptionsTab = activeTab === "subscriptions";
+    const dataToExport = isSubscriptionsTab
+      ? filteredSubscriptions
+      : filteredLedger;
+
+    if (!dataToExport || dataToExport.length === 0) {
+      toast.error("No data available to export.");
+      return;
+    }
+
+    // Helper function to safely format fields for CSV format
+    const formatCSVField = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      const stringVal = String(val).replace(/"/g, '""'); // Escape inner double-quotes
+      return `"${stringVal}"`;
+    };
+
+    let headers: string[] = [];
+    let rows: string[][] = [];
+
+    if (isSubscriptionsTab) {
+      headers = [
+        "Estate Name",
+        "Estate Code",
+        "Current Plan",
+        "Expiry Date",
+        "Status",
+      ];
+      rows = (dataToExport as EstateSubscription[]).map((sub) => {
+        // Format Plan Column
+        const plan =
+          typeof sub.plan === "string"
+            ? (() => {
+                try {
+                  return JSON.parse(sub.plan);
+                } catch {
+                  return sub.plan;
+                }
+              })()
+            : sub.plan;
+
+        const planName = plan?.is_trial
+          ? "Trial"
+          : plan?.selected_add_ons
+              ?.map((f: string) => f.replace(/_/g, " "))
+              .join(", ") || "Base Plan";
+
+        // Format Expiry Date Column
+        const expiryDate = sub.subscription_expiry
+          ? new Date(sub.subscription_expiry).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })
+          : "N/A";
+
+        return [
+          sub.name,
+          sub.estate_code,
+          planName,
+          expiryDate,
+          sub.subscription_status.toUpperCase(),
+        ];
+      });
+    } else {
+      headers = [
+        "Date",
+        "Estate Name",
+        "Estate Code",
+        "Reference",
+        "Plan / Coverage",
+        "Duration (Months)",
+        "Amount",
+        "Currency",
+        "Status",
+        "Processed By",
+      ];
+      rows = (dataToExport as PaymentLedgerItem[]).map((item) => {
+        const formattedDate = new Date(item.created_at).toLocaleDateString(
+          "en-US",
+          {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          },
+        );
+
+        const plan =
+          typeof item.plan === "string"
+            ? (() => {
+                try {
+                  return JSON.parse(item.plan);
+                } catch {
+                  return item.plan;
+                }
+              })()
+            : item.plan;
+
+        const planName = plan?.is_trial
+          ? "Trial"
+          : plan?.selected_add_ons
+              ?.map((f: string) => f.replace(/_/g, " "))
+              .join(", ") || "Base Plan";
+
+        return [
+          formattedDate,
+          item.estate_name || "N/A",
+          item.estate_code || item.estate_id || "",
+          item.payment_reference || "N/A",
+          planName,
+          String(item.duration_months || ""),
+          String(item.amount || 0),
+          item.currency || "NGN",
+          item.payment_status.toUpperCase(),
+          item.processed_by_email || "",
+        ];
+      });
+    }
+
+    // Build CSV content string
+    const csvContent = [
+      headers.map(formatCSVField).join(","),
+      ...rows.map((row) => row.map(formatCSVField).join(",")),
+    ].join("\n");
+
+    // Create Blob & Link to trigger download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const filename = `${activeTab}_export_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="rounded-xl bg-slate-900 border border-slate-800 overflow-hidden shadow-xl flex flex-col">
       {/* Tab Navigation Header - Fixed at top */}
@@ -198,6 +350,18 @@ export default function SubscriptionsLedgerView() {
             Payments Ledger ({ledger.length})
           </button>
         </div>
+        <button
+          onClick={handleExportCSV}
+          disabled={
+            activeTab === "subscriptions"
+              ? filteredSubscriptions.length === 0
+              : filteredLedger.length === 0
+          }
+          className="flex items-center gap-2 border-transparent text-slate-400 hover:text-slate-200 text-xs font-semibold px-3 pb-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          <Download className="w-3.5 h-3.5" />
+          <span>Export CSV</span>
+        </button>
       </div>
 
       {/* Dynamic Filter Controls Bar - Fixed */}

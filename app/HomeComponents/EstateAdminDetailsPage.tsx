@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState } from "react";
-import { AdminUser, Estate } from "../services/types";
+import { AdminUser, Estate, EstateProfile } from "../services/types";
 import { getRelativeTime } from "../services/apis";
 import { X } from "lucide-react";
 import { updateEstateAdminStatus } from "../services/apis_estates";
@@ -12,7 +12,7 @@ import AuditLogsPage from "./AuditLogs";
 
 interface AdminUserDetailsPageProps {
   admin: AdminUser;
-  estate: Estate;
+  estate: EstateProfile;
   toggleAccess: (adminId: string, nextStatus: "ACTIVE" | "SUSPENDED") => void;
   onBack: () => void;
 }
@@ -354,8 +354,10 @@ export default function AdminUserDetailsPage({
                       External Endpoint Pipeline URL
                     </p>
                     <p
-                      className="text-xs font-mono text-slate-700 truncate select-all"
-                      title={estate.external_api_url}
+                      title={
+                        estate.external_api_url ??
+                        "System pipelines default running."
+                      }
                     >
                       {estate.external_api_url ||
                         "System pipelines default running."}

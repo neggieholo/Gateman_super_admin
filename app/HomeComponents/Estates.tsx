@@ -7,6 +7,8 @@ import { getEstatesDashboard } from "../services/apis_estates";
 import EstateDashboardPage from "./EstateDashboardPage";
 import { showAccessDeniedToast } from "./ManageUsersPage";
 import { useUser } from "../UserContext";
+import { Download, MessageSquare } from "lucide-react";
+import { NotifyEstateModal } from "./NotifyEstateModal";
 
 export default function EstatesManagement() {
   const { user } = useUser();
@@ -16,10 +18,7 @@ export default function EstatesManagement() {
     useState<DashboardEstateNode | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [totalEstates, setTotalEstates] = useState<number>(0);
-
-  useEffect(() => {
-    fetchEstates();
-  }, []);
+  const [messageModalOpen, setMessageModalOpen] = useState<boolean>(false);
 
   const fetchEstates = useCallback(async () => {
     const canViewDEstates =
@@ -48,8 +47,11 @@ export default function EstatesManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
+  useEffect(() => {
+    fetchEstates();
+  }, [fetchEstates]);
   const selectEstate = (estate: DashboardEstateNode) => {
     const canViewLogs =
       user?.permissions.includes("estates_management") ||
@@ -75,6 +77,92 @@ export default function EstatesManagement() {
     currentPermissions.includes("all-access") ||
     currentPermissions.includes("view_estate_info") ||
     currentPermissions.includes("estates_management");
+
+  const exportToCSV = () => {
+    if (filteredEstates.length === 0) {
+      toast.error("No data available to export.");
+      return;
+    }
+
+    // 1. Calculate Aggregated Metrics
+    const activeEstates = estates.filter((e) => e.status === "ACTIVE").length;
+    const activeResidents30d = estates.reduce(
+      (acc, curr) => acc + (Number(curr.active_residents_30_days) || 0),
+      0,
+    );
+    const totalResidents = estates.reduce(
+      (acc, curr) => acc + (Number(curr.total_residents) || 0),
+      0,
+    );
+    const guardsOnDuty = estates.reduce(
+      (acc, curr) => acc + (Number(curr.guards_on_duty) || 0),
+      0,
+    );
+    const totalGuards = estates.reduce(
+      (acc, curr) => acc + (Number(curr.total_guards) || 0),
+      0,
+    );
+
+    // 2. Format Summary Section
+    const summaryRows = [
+      ["--- GLOBAL METRICS SUMMARY ---"],
+      ["Total Registered Estates", totalEstates],
+      ["Active Estates", activeEstates],
+      ["Active Residents (Last 30 Days)", activeResidents30d],
+      ["Total Enrolled Residents", totalResidents],
+      ["Guards On Duty", guardsOnDuty],
+      ["Total Registered Guards", totalGuards],
+      [], // Blank line separator
+      ["--- ESTATES DIRECTORY LIST ---"],
+    ];
+
+    // 3. Format Table Headers & Rows
+    const headers = [
+      "Estate ID",
+      "Estate Name",
+      "Code",
+      "LGA",
+      "State",
+      "Active Residents (30d)",
+      "Total Residents",
+      "Guards On Duty",
+      "Total Guards",
+      "Status",
+    ];
+
+    const tableRows = filteredEstates.map((e) => [
+      `"${e.id || ""}"`,
+      `"${(e.name || "").replace(/"/g, '""')}"`,
+      `"${e.estate_code || ""}"`,
+      `"${e.lga || ""}"`,
+      `"${e.state || ""}"`,
+      e.active_residents_30_days || 0,
+      e.total_residents || 0,
+      e.guards_on_duty || 0,
+      e.total_guards || 0,
+      `"${e.status || ""}"`,
+    ]);
+
+    // 4. Combine into Single CSV Payload
+    const fullCsvArray = [
+      ...summaryRows.map((r) => r.join(",")),
+      headers.join(","),
+      ...tableRows.map((r) => r.join(",")),
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8," + fullCsvArray.join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `Estates_Management_Report_${new Date().toISOString().slice(0, 10)}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   if (!hasAccessToCurrentPanel) {
     return (
@@ -172,6 +260,20 @@ export default function EstatesManagement() {
                 resident counts and security parameters.
               </p>
             </div>
+            <button
+              onClick={exportToCSV}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export CSV
+            </button>
+            <button
+              onClick={() => setMessageModalOpen(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              Notify All
+            </button>
             <input
               type="text"
               placeholder="Filter by name, LGA or code..."
@@ -266,6 +368,11 @@ export default function EstatesManagement() {
           onBack={() => setSelectedEstate(null)}
         />
       )}
+      <NotifyEstateModal
+        isOpen={messageModalOpen}
+        onClose={() => setMessageModalOpen(false)}
+        isGlobal={true}
+      />
     </div>
   );
 }

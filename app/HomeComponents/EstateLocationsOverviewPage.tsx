@@ -4,13 +4,11 @@ import {
   Search,
   MapPin,
   Calendar,
-  Layers,
   X,
   ExternalLink,
-  SlidersHorizontal,
+  Download,
 } from "lucide-react";
 import { EstateFacility } from "../services/types";
-
 
 interface EstateLocationsOverviewPageProps {
   locations: EstateFacility[];
@@ -101,6 +99,45 @@ export default function EstateLocationsOverviewPage({
     });
   }, [locations, searchQuery]);
 
+  const handleExportCSV = () => {
+    if (!filteredLocations.length) return;
+
+    const headers = [
+      "Location Name",
+      "Internal Spatial Descriptor",
+      "Capacity Bounds",
+      "Days Booked",
+    ];
+
+    const rows = filteredLocations.map((loc) => [
+      `"${(loc.name || "").replace(/"/g, '""')}"`,
+      `"${(loc.location_in_estate || "No internal directions provided.").replace(/"/g, '""')}"`,
+      `"${loc.capacity ? loc.capacity : "N/A"}"`,
+      `"${countLocationBookedDays(loc.event_booked_on)}"`,
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const sanitizedEstateName = (estatename || "estate")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "_");
+
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `${sanitizedEstateName}_locations_overview.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const openDetails = (loc: EstateFacility) => {
     setSelectedLocation(loc);
     setShowDetailModal(true);
@@ -128,6 +165,20 @@ export default function EstateLocationsOverviewPage({
               {estatename}
             </span>
           </div>
+        </div>
+        <div>
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            disabled={filteredLocations.length === 0}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
+              filteredLocations.length === 0
+                ? "bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-200"
+                : "bg-indigo-600 hover:bg-indigo-700 text-white active:scale-[0.98]"
+            }`}
+          >
+            <Download size={14} /> Export CSV Ledger ({filteredLocations.length})
+          </button>
         </div>
       </div>
 

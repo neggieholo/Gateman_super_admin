@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -13,6 +14,8 @@ import React, {
 import { EstatesListRow, notification, UserContextType } from "./services/types";
 import { User } from "./services/types";
 import { fetchNotifications } from "./services/apis";
+import { io, Socket } from "socket.io-client";
+import toast from "react-hot-toast";
 
 interface UnifiedUserContextType extends UserContextType {
   user: User | null;
@@ -29,6 +32,7 @@ interface UnifiedUserContextType extends UserContextType {
   badgeCount: number;
   setBadgeCount: (count: number) => void;
   loadingNotifications: boolean;
+  socket: Socket | null;
 }
 
 const UserContext = createContext<UnifiedUserContextType | undefined>(
@@ -42,8 +46,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);  
   const [notifications, setNotifications] = useState<notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
-  // const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
   const [badgeCount, setBadgeCount] = useState<number>(0);
   const [refreshTrigger, setRefreshTrigger] = useState<boolean>(false);
   const triggerRefresh = () => setRefreshTrigger((prev) => !prev);
@@ -66,7 +71,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           setBadgeCount(unreadCount);
         }
       } catch (error) {
-        alert("Failed to fetch notifications");
+        toast.error("Failed to fetch notifications");
       } finally {
         setLoadingNotifications(false);
       }
@@ -75,37 +80,44 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     getNotifications();
   }, [user, refreshTrigger]);
 
-  //   useEffect(() => {
-  //     const newSocket = io('http://localhost:3066', {
-  //       path: '/api/socket.io',
-  //       withCredentials: true,
-  //       autoConnect: true,
-  //       reconnectionAttempts: 5,
-  //     });
+   useEffect(() => {
+     if (!user) {
+       if (socketRef.current) {
+         console.log("🔌 User logged out. Disconnecting socket...");
+         socketRef.current.disconnect();
+         socketRef.current = null;
+         setIsConnected(false);
+       }
+       return;
+     }
 
-  //     newSocket.on('connect', () => setIsConnected(true));
-  //     newSocket.on('onlineCheck', (users) => setOnlineMembers(users));
+     console.log("⚡ User session detected. Initializing socket connection...");
 
-  //     newSocket.on('notification_deleted', (id: string) => {
-  //       setNotifications((prev) => prev.filter((n) => n._id !== id));
-  //     });
+     const newSocket = io(baseUrl, {
+       path: "/api/socket.io",
+       transports: ["websocket", "polling"],
+       withCredentials: true,
+     });
 
-  //       });
-  //     };
+     newSocket.on("connect", () => {
+       setIsConnected(true);
+       console.log("✅ Socket Connected via Session ID");
+     });
 
-  //     newSocket.on('messages', (data) => {
-  //       setNotifications((prev) => {
-  //         const incoming = Array.isArray(data) ? data : [data];
-  //         const combined = [...incoming, ...prev];
-  //         return combined.filter((v, i, a) => a.findIndex((t) => t._id === v._id) === i);
-  //       });
-  //     });
+     newSocket.on("new_notification", () => {
+       triggerRefresh();
+     });
 
-  //     socketRef.current = newSocket;
-  //     return () => {
-  //       newSocket.close();
-  //     };
-  //   }, []);
+     socketRef.current = newSocket;
+
+     return () => {
+       newSocket.off("new_notification");
+       newSocket.off("guard_location_update");
+       newSocket.close();
+       socketRef.current = null;
+     };
+   }, [baseUrl, user]);
+
 
   return (
     <UserContext.Provider
@@ -123,7 +135,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         triggerRefresh,
         badgeCount,
         setBadgeCount,
-        // socket: socketRef.current,
+        socket: socketRef.current,
         loadingNotifications,
       }}
     >
