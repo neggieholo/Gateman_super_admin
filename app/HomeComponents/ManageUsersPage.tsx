@@ -12,6 +12,8 @@ import {
   User,
   ArrowLeft,
   Loader2,
+  Filter,
+  ChevronDown,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { SuperAdminUser } from "../services/types";
@@ -27,6 +29,7 @@ import AdminPermissionsModal from "./AdminPermissionsModal";
 import { useUser } from "../UserContext";
 import AdminPasswordOverrideModal from "./AdminPasswordOverrideModal";
 import SecurityActionWarningModal from "./SecurityActionWarningModal";
+import { SYSTEM_PERMISSIONS } from "../services/data";
 
 export const showAccessDeniedToast = () => {
   toast.error(
@@ -141,6 +144,41 @@ export default function ManageUsersPage() {
     }
     setSelectedPermissionsUser(User);
     setIsPermissionsOpen(true);
+  };
+
+  const handleTogglePermission = (permissionId: string) => {
+    setSelectedPermissionIds((prev) => {
+      const isSelected = prev.includes(permissionId);
+      const parentNode = SYSTEM_PERMISSIONS.find((p) => p.id === permissionId);
+
+      // If toggling a parent permission, toggle all its children as well
+      if (parentNode && parentNode.parent_permission === null) {
+        const childIds = SYSTEM_PERMISSIONS.filter(
+          (p) => p.parent_permission === permissionId,
+        ).map((p) => p.id);
+
+        if (isSelected) {
+          return prev.filter(
+            (id) => id !== permissionId && !childIds.includes(id),
+          );
+        } else {
+          return Array.from(new Set([...prev, permissionId, ...childIds]));
+        }
+      }
+
+      // Toggling a child permission
+      if (isSelected) {
+        return prev.filter((id) => id !== permissionId);
+      } else {
+        return [...prev, permissionId];
+      }
+    });
+  };
+
+  const clearFilters = () => {
+    setAccountTypeFilter("ALL");
+    setSelectedPermissionIds([]);
+    setSearchQuery("");
   };
 
   const handleResetPassword = (targetUser: SuperAdminUser) => {
@@ -315,11 +353,34 @@ export default function ManageUsersPage() {
   };
 
   // Filtered Lists Logic Matrices
-  const filteredUsers = users.filter(
-    (u) =>
+  // const filteredUsers = users.filter(
+  //   (u) =>
+  //     u.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     u.email.toLowerCase().includes(searchQuery.toLowerCase()),
+  // );
+
+  // Updated Filtered Lists Logic Matrices
+  const filteredUsers = users.filter((u) => {
+    // 1. Text Search Filter
+    const matchesSearch =
       u.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+      u.email.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // 2. Account Type Filter (Main accounts vs Sub accounts)
+    const isSubAccount = u.sub_account;
+    const matchesAccountType =
+      accountTypeFilter === "ALL" ||
+      (accountTypeFilter === "MAIN" && !isSubAccount) ||
+      (accountTypeFilter === "SUB" && isSubAccount);
+
+    // 3. Permissions Checkbox Filter (Inclusive matching)
+    const userPermissions = u.permissions || [];
+    const matchesPermissions =
+      selectedPermissionIds.length === 0 ||
+      selectedPermissionIds.some((pId) => userPermissions.includes(pId));
+
+    return matchesSearch && matchesAccountType && matchesPermissions;
+  });
 
   if (isLogsOpen) {
     return (
@@ -342,7 +403,7 @@ export default function ManageUsersPage() {
   }
 
   return (
-    <div className="relative flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 h-[calc(100vh-120px)] bg-slate-50/50 font-sans">
+    <div className="relative flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-h-screen bg-slate-50/50 font-sans">
       {/* Structural Workspace Header Block */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
@@ -364,23 +425,163 @@ export default function ManageUsersPage() {
       {/* TAB CONTENT MATRICES */}
       <div
         key={loading ? "loading-state" : "loaded-state"}
-        className="animate-in fade-in zoom-in-99 duration-150"
+        className="animate-in fade-in zoom-in-99 duration-150 overflow-hidden flex flex-col flex-1 min-h-[70vh]"
       >
         <div className="space-y-4">
-          {/* Search Filter Strip */}
-          <div className="flex items-center relative max-w-sm">
-            <Search className="absolute left-4 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search active admins by signature or endpoint..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200/80 rounded-2xl font-sans font-bold text-slate-900 text-xs shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-            />
+          {/* Filter Controls Bar */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search Bar */}
+            <div className="flex items-center relative flex-1 min-w-60 max-w-sm">
+              <Search className="absolute left-4 text-slate-400" size={18} />
+              <input
+                type="text"
+                placeholder="Search active admins by signature or endpoint..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200/80 rounded-2xl font-sans font-bold text-slate-900 text-xs shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+
+            {/* Account Type Filter Selector */}
+            <div className="flex items-center bg-white p-1 rounded-2xl border border-slate-200/80 shadow-sm text-xs font-bold">
+              <button
+                onClick={() => setAccountTypeFilter("ALL")}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  accountTypeFilter === "ALL"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                All Types
+              </button>
+              <button
+                onClick={() => setAccountTypeFilter("MAIN")}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  accountTypeFilter === "MAIN"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                Main Accounts
+              </button>
+              <button
+                onClick={() => setAccountTypeFilter("SUB")}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  accountTypeFilter === "SUB"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                Sub-Accounts
+              </button>
+            </div>
+
+            {/* Permissions Dropdown Filter */}
+            <div className="relative">
+              <button
+                onClick={() => setIsFilterDropdownOpen((prev) => !prev)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200/80 rounded-2xl text-xs font-bold text-slate-700 shadow-sm hover:border-slate-300 transition-all"
+              >
+                <Filter size={15} className="text-slate-400" />
+                <span>Permissions</span>
+                {selectedPermissionIds.length > 0 && (
+                  <span className="bg-indigo-600 text-white text-[10px] px-2 py-0.5 rounded-full font-mono">
+                    {selectedPermissionIds.length}
+                  </span>
+                )}
+                <ChevronDown size={14} className="text-slate-400" />
+              </button>
+
+              {/* Dropdown Menu */}
+              {isFilterDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white border border-slate-200 rounded-3xl shadow-2xl p-4 z-50 space-y-4 font-sans text-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <span className="font-montserrat font-black text-slate-900 uppercase text-[10px] tracking-wider">
+                      Filter By Permission
+                    </span>
+                    {selectedPermissionIds.length > 0 && (
+                      <button
+                        onClick={() => setSelectedPermissionIds([])}
+                        className="text-[10px] text-rose-500 hover:underline font-bold"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Hierarchical Tree Render */}
+                  <div className="space-y-3">
+                    {SYSTEM_PERMISSIONS.filter(
+                      (p) => p.parent_permission === null,
+                    ).map((parent) => {
+                      const children = SYSTEM_PERMISSIONS.filter(
+                        (p) => p.parent_permission === parent.id,
+                      );
+                      const isParentChecked = selectedPermissionIds.includes(
+                        parent.id,
+                      );
+
+                      return (
+                        <div key={parent.id} className="space-y-1.5">
+                          {/* Parent Root Node */}
+                          <label className="flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer hover:text-indigo-600">
+                            <input
+                              type="checkbox"
+                              checked={isParentChecked}
+                              onChange={() => handleTogglePermission(parent.id)}
+                              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <span>{parent.name}</span>
+                          </label>
+
+                          {/* Children Sub-Nodes */}
+                          {children.length > 0 && (
+                            <div className="pl-6 space-y-1 border-l-2 border-slate-100 ml-2">
+                              {children.map((child) => {
+                                const isChildChecked =
+                                  selectedPermissionIds.includes(child.id);
+                                return (
+                                  <label
+                                    key={child.id}
+                                    className="flex items-center gap-2 text-slate-600 hover:text-slate-900 cursor-pointer font-medium"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChildChecked}
+                                      onChange={() =>
+                                        handleTogglePermission(child.id)
+                                      }
+                                      className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <span>{child.name}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Clear All Active Filters Button */}
+            {(accountTypeFilter !== "ALL" ||
+              selectedPermissionIds.length > 0 ||
+              searchQuery) && (
+              <button
+                onClick={clearFilters}
+                className="text-xs font-bold text-rose-500 hover:text-rose-700 px-2 py-1"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
 
           {/* Main Data Table */}
-          <div className="bg-white rounded-4xl border border-slate-100 shadow-xl shadow-slate-100/40 overflow-hidden">
+          <div className="bg-white rounded-4xl border border-slate-100 shadow-xl shadow-slate-100/40">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>

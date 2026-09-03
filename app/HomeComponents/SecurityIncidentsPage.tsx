@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  AlertTriangle,
   Search,
   Filter,
   ShieldX,

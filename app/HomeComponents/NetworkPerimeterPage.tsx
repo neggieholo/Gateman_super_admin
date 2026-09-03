@@ -294,53 +294,6 @@ export default function NetworkPerimeterPage() {
     <div
       className={`space-y-6 animate-in fade-in duration-200 ${actionLoading ? "pointer-events-none opacity-60" : ""}`}
     >
-      {/* 📊 SUMMARY METRICS CARDS ROW */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl flex items-center gap-4 shadow-sm">
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-            <Activity size={20} />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
-              Live Links
-            </p>
-            <h3 className="text-xl font-bold font-oswald text-slate-800">
-              {liveConnections.length} Active
-            </h3>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl flex items-center gap-4 shadow-sm">
-          <div
-            className={`p-3 rounded-xl ${pendingRequests.length > 0 ? "bg-amber-50 text-amber-600 animate-pulse" : "bg-slate-50 text-slate-400"}`}
-          >
-            <Clock size={20} />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
-              Pending Perimeter Approvals
-            </p>
-            <h3 className="text-xl font-bold font-oswald text-slate-800">
-              {pendingRequests.length} Awaiting
-            </h3>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl flex items-center gap-4 shadow-sm">
-          <div className="p-3 bg-slate-900 text-white rounded-xl">
-            <SlidersHorizontal size={20} />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
-              Active Guard Policies
-            </p>
-            <h3 className="text-xl font-bold font-oswald text-slate-800">
-              {firewallRules.length} Vector Rules
-            </h3>
-          </div>
-        </div>
-      </div>
-
       {/* 🛠️ SUB-NAV CONTROLLER SWITCH */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-2">
         <div className="flex gap-2 bg-slate-100 p-1 rounded-xl w-fit border">
