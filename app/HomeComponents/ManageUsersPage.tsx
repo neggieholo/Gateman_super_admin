@@ -64,6 +64,13 @@ export default function ManageUsersPage() {
   const [isOverrideOpen, setIsOverrideOpen] = useState(false);
   const [selectedOverrideUser, setSelectedOverrideUser] =
     useState<SuperAdminUser | null>(null);
+  const [accountTypeFilter, setAccountTypeFilter] = useState<
+    "ALL" | "MAIN" | "SUB"
+  >("ALL");
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>(
+    [],
+  );
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [isWarningOpen, setIsWarningOpen] = useState(false);
   const [warningConfig, setWarningConfig] = useState<{
     title: string;
@@ -121,7 +128,8 @@ export default function ManageUsersPage() {
     setLogsName(name);
   };
 
-  const handleEditPermissions = (user: SuperAdminUser) => {
+  const handleEditPermissions = (User: SuperAdminUser) => {
+    console.log("User permissions:", user?.permissions);
     const canManagePermissions =
       user?.permissions.includes("users_management") ||
       user?.permissions.includes("modify_user_permissions") ||
@@ -131,7 +139,7 @@ export default function ManageUsersPage() {
       showAccessDeniedToast();
       return;
     }
-    setSelectedPermissionsUser(user);
+    setSelectedPermissionsUser(User);
     setIsPermissionsOpen(true);
   };
 
@@ -324,7 +332,11 @@ export default function ManageUsersPage() {
         >
           <ArrowLeft size={16} /> Back
         </button>
-        <UserLogsPage isolatedAdminId={logsId} isolatedAdminName={logsName} type="user"/>
+        <UserLogsPage
+          isolatedAdminId={logsId}
+          isolatedAdminName={logsName}
+          type="user"
+        />
       </div>
     );
   }
@@ -334,9 +346,14 @@ export default function ManageUsersPage() {
       {/* Structural Workspace Header Block */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-montserrat font-black text-slate-900 tracking-tight">
-            User Workstation Hub
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-montserrat font-black text-slate-900 tracking-tight">
+              User Workstation Hub
+            </h1>
+            <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-mono">
+              Showing {adminCount} Admin accounts
+            </span>
+          </div>
           <p className="text-slate-500 text-sm font-medium">
             Manage admin privileges, assign core credentials, and audit security
             events.

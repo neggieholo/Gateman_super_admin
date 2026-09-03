@@ -16,6 +16,7 @@ import { useUser } from "../UserContext";
 import toast from "react-hot-toast";
 
 export default function SuperAdminDashboardOverview() {
+  const { user } = useUser();
   const [analytics, setAnalytics] = useState<DashboardAnalyticsPayload | null>(
     null,
   );
@@ -150,7 +151,7 @@ export default function SuperAdminDashboardOverview() {
   const { superAdminStats, ecosystemStats } = analytics;
 
   return (
-    <div className="p-6 space-y-8 bg-slate-50 min-h-screen font-sans text-slate-800">
+    <div className="p-6 space-y-8 bg-slate-50 h-screen max-h-screen overflow-y-auto font-sans text-slate-800">
       {/* ========================================================================= */}
       {/* SECTION 1: IDENTITY ACCESS MANAGEMENT (SUPER ADMINS SECTION)              */}
       {/* ========================================================================= */}

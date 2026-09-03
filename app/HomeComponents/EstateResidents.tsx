@@ -313,7 +313,7 @@ export default function ResidentsOverviewPage({
   }
 
   return (
-    <div className="p-1 sm:p-6 bg-slate-50 overflow-hidden flex flex-col h-full min-h-0 space-y-6">
+    <div className="p-1 sm:p-6 bg-slate-50 overflow-y-auto flex flex-col max-h-screen min-h-0 space-y-6">
       {/* Navigation Header Bar */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -371,7 +371,7 @@ export default function ResidentsOverviewPage({
           </div>
 
           {/* Primary Table Section */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col flex-1 min-h-[70vh]">
             <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="flex items-center gap-3">
                 <span className="text-xs font-black text-slate-700 uppercase tracking-wider">

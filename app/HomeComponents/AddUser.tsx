@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -11,13 +12,9 @@ import {
   Square,
   Info,
   Loader2,
-  Eye,
-  EyeClosed,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { SYSTEM_PERMISSIONS } from "../services/data";
-
-// Import your brand new live data connection methods
 import {
   fetchSystemPermissionsApi,
   fetchCustomRolesApi,
@@ -53,7 +50,6 @@ export default function AddSuperAdmin() {
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [customRoleName, setCustomRoleName] = useState("");
   const [savingCustomRole, setSavingCustomRole] = useState(false);
-  const [show, setShow] = useState(false);
 
   // ─── EFFORTLESS HANDSHAKE HYDRATION DATA LOOP ───
   useEffect(() => {
@@ -79,6 +75,17 @@ export default function AddSuperAdmin() {
     hydratePageData();
   }, []);
 
+  useEffect(() => {
+    if (
+      selectedPermissions.includes("all-access") ||
+      selectedPermissions.includes("all_access")
+    ) {
+      setIsSubAccount(false);
+    } else {
+      setIsSubAccount(true);
+    }
+  }, [selectedPermissions]);
+
   // Handle Multi-level Permission Check Toggles
   const handleTogglePermission = (id: string, isParent: boolean) => {
     if ((id === "all-access" || id === "all_access") && !iHaveAllAccess) {
@@ -100,14 +107,27 @@ export default function AddSuperAdmin() {
       return;
     }
 
-    let updated = [...selectedPermissions];
+    const isAllAccessTarget = id === "all-access" || id === "all_access";
+
+    if (isAllAccessTarget) {
+      if (selectedPermissions.includes(id)) {
+        setSelectedPermissions([]);
+        setIsSubAccount(true);
+      } else {
+        setSelectedPermissions([id]);
+        setIsSubAccount(false);
+      }
+      return;
+    }
+
+    let updated = selectedPermissions.filter(
+      (item) => item !== "all-access" && item !== "all_access",
+    );
 
     if (isParent) {
-      // Toggling the parent group root is dead simple now
       if (updated.includes(id)) {
         updated = updated.filter((item) => item !== id);
       } else {
-        // Clean up any individual child tokens if the parent master-key is selected
         const childrenIds = systemPermissions
           .filter((p) => p.parent_permission === id)
           .map((p) => p.id);
@@ -118,26 +138,47 @@ export default function AddSuperAdmin() {
     } else {
       // ─── CHILD SELECTION INTERCEPT WINDOW ───
       const targetNode = systemPermissions.find((p) => p.id === id);
-      const parentId = targetNode?.parent_permission; // It's directly a string id token
+      const parentId = targetNode?.parent_permission;
 
       if (updated.includes(id)) {
-        // Case A: Explicit single child uncheck
         updated = updated.filter((item) => item !== id);
       } else if (parentId && updated.includes(parentId)) {
-        // Case B: The parent group token was checked, and they just unchecked one child!
-        // We must dissolve the parent key into individual tokens for all OTHER children.
         const siblingIds = systemPermissions
           .filter((p) => p.parent_permission === parentId && p.id !== id)
           .map((p) => p.id);
 
-        // Remove the parent token, then append the other sub-permissions explicitly
         updated = updated.filter((item) => item !== parentId);
         updated = Array.from(new Set([...updated, ...siblingIds]));
       } else {
-        // Case C: Standard single child check
         updated.push(id);
+
+        if (parentId) {
+          const allSiblingIds = systemPermissions
+            .filter((p) => p.parent_permission === parentId)
+            .map((p) => p.id);
+
+          const hasAllSiblings = allSiblingIds.every((sibId) =>
+            updated.includes(sibId),
+          );
+
+          if (hasAllSiblings) {
+            updated = updated.filter((item) => !allSiblingIds.includes(item));
+            updated.push(parentId);
+          }
+        }
       }
     }
+
+    // if (iHaveAllAccess) {
+    //   const allParentIds = parentPermissions.map((p) => p.id);
+    //   const hasAllParents = allParentIds.every((pId) => updated.includes(pId));
+
+    //   if (hasAllParents && allParentIds.length > 0) {
+    //     setSelectedPermissions(["all-access"]);
+    //     setIsSubAccount(false);
+    //     return;
+    //   }
+    // }
 
     setSelectedPermissions(updated);
   };
@@ -164,7 +205,13 @@ export default function AddSuperAdmin() {
       );
       return;
     }
-    setSelectedPermissions(rolePermissions);
+    if (containsAllAccess) {
+      setSelectedPermissions(["all-access"]);
+      setIsSubAccount(false);
+    } else {
+      setSelectedPermissions(rolePermissions);
+    }
+
     toast.success("Role preset mapped onto permissions.");
   };
 
@@ -335,9 +382,20 @@ export default function AddSuperAdmin() {
               </div>
             </label>
 
-            <label className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-2xl cursor-pointer hover:bg-slate-100/50 transition-all select-none">
+            <label
+              className={`flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-2xl transition-all select-none ${
+                selectedPermissions.includes("all-access") ||
+                selectedPermissions.includes("all_access")
+                  ? "opacity-50 cursor-not-allowed"
+                  : "cursor-pointer hover:bg-slate-100/50"
+              }`}
+            >
               <input
                 type="checkbox"
+                disabled={
+                  selectedPermissions.includes("all-access") ||
+                  selectedPermissions.includes("all_access")
+                }
                 checked={isSubAccount}
                 onChange={(e) => setIsSubAccount(e.target.checked)}
                 className="rounded text-indigo-600 focus:ring-indigo-500 mt-0.5"
@@ -377,7 +435,14 @@ export default function AddSuperAdmin() {
               const subPermissions = systemPermissions.filter(
                 (p) => p.parent_permission === parent.id,
               );
-              const isParentChecked = selectedPermissions.includes(parent.id);
+              const isAllAccessChecked =
+                selectedPermissions.includes("all-access") ||
+                selectedPermissions.includes("all_access");
+
+              const isThisAllAccessNode =
+                parent.id === "all-access" || parent.id === "all_access";
+              const isParentChecked =
+                selectedPermissions.includes(parent.id) || isAllAccessChecked;
 
               return (
                 <div
@@ -390,10 +455,17 @@ export default function AddSuperAdmin() {
                     </span>
                     <button
                       type="button"
+                      disabled={
+                        !isThisAllAccessNode ? isAllAccessChecked : false
+                      }
                       onClick={() => handleTogglePermission(parent.id, true)}
                       className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[9px] font-oswald font-black uppercase tracking-wider transition-all border ${isParentChecked ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-400 border-slate-200 hover:text-gm-navy"}`}
                     >
-                      {isParentChecked ? "Revoke Group" : "Authorize Group"}
+                      {isAllAccessChecked && !isThisAllAccessNode
+                        ? "Auto Selection"
+                        : isParentChecked
+                          ? "Revoke Group"
+                          : "Authorize Group"}
                     </button>
                   </div>
 
@@ -403,8 +475,9 @@ export default function AddSuperAdmin() {
                         selectedPermissions.includes(child.id) ||
                         isParentChecked;
                       return (
-                        <div
+                        <button
                           key={child.id}
+                          disabled={isAllAccessChecked}
                           onClick={() =>
                             handleTogglePermission(child.id, false)
                           }
@@ -424,7 +497,7 @@ export default function AddSuperAdmin() {
                           <span className="text-xs font-bold leading-none">
                             {child.name}
                           </span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>

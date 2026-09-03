@@ -56,14 +56,14 @@ const HomeNavbar = () => {
       {/* ACTION CONTROLS */}
       <div className="flex items-center gap-8">
         <div className="flex items-center gap-2">
-          <div className="indicator group">
+          <div className="indicator group mx-4">
             {badgeCount > 0 && (
-              <span className="indicator-item badge badge-primary badge-sm text-white font-bold border-white border-2 scale-110 group-hover:animate-bounce">
+              <span className="indicator-item badge badge-error badge-sm text-white font-bold border-white border-2 group-hover:animate-bounce">
                 {badgeCount}
               </span>
             )}
             <button
-              className="btn btn-ghost btn-circle bg-gm-charcoal/40 hover:bg-secondary/10 hover:text-primary transition-all duration-300 shadow-sm border mx-4 border-slate-100"
+              className="btn btn-ghost btn-circle bg-gm-charcoal/40 hover:bg-secondary/10 hover:text-primary transition-all duration-300 shadow-sm border border-slate-100"
               onClick={() => router.push("/home/notifications")}
             >
               <svg
