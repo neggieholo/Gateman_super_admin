@@ -7,6 +7,7 @@ import { History, User, UserPlus } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useUser } from "../UserContext";
 import UserLogsPage from "./UserLogsPage";
+import { useSearchParams } from "next/navigation";
 
 // 🔐 TARGET TAB TO PERMISSION ARRAYS
 const TAB_PERMISSIONS = {
@@ -21,6 +22,8 @@ export default function UsersPage() {
     "users" | "add" | "logs" | "my_logs"
   >("users");
   const { user } = useUser();
+  const searchParams = useSearchParams();
+  const permissionId = searchParams.get("permission_id");
 
   // 🧠 LIFECYCLE 1: Force immediate check on mount & clean up toasts on unmount
   useEffect(() => {
@@ -56,9 +59,14 @@ export default function UsersPage() {
     };
   }, [user]); // Fires immediately when user data context loads up
 
-  /**
-   * Intercepts manual tab switching clicks
-   */
+  useEffect(() => {
+    if (permissionId) {
+      console.log("Permission Id from users:", permissionId);
+    }
+    const newUrl = window.location.pathname;
+    window.history.replaceState({ ...window.history.state }, "", newUrl);
+  }, [permissionId]);
+
   const handleTabSwitch = (targetTab: "users" | "add" | "logs") => {
     const userPermissions = user?.permissions || [];
     const hasAllAccess = userPermissions.includes("all-access");

@@ -30,6 +30,7 @@ import { useUser } from "../UserContext";
 import AdminPasswordOverrideModal from "./AdminPasswordOverrideModal";
 import SecurityActionWarningModal from "./SecurityActionWarningModal";
 import { SYSTEM_PERMISSIONS } from "../services/data";
+import { useSearchParams } from "next/navigation";
 
 export const showAccessDeniedToast = () => {
   toast.error(
@@ -73,6 +74,8 @@ export default function ManageUsersPage() {
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>(
     [],
   );
+  const searchParams = useSearchParams();
+  const permissionId = searchParams.get("permission_id");
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [isWarningOpen, setIsWarningOpen] = useState(false);
   const [warningConfig, setWarningConfig] = useState<{
@@ -88,6 +91,14 @@ export default function ManageUsersPage() {
     variant: "warning",
     onConfirm: () => {},
   });
+
+  useEffect(() => {
+    if (!permissionId) return;
+    setIsFilterDropdownOpen(true);
+    setSelectedPermissionIds([permissionId]);
+    const newUrl = window.location.pathname;
+    window.history.replaceState({ ...window.history.state }, "", newUrl);
+  }, [permissionId]);
 
   const fetchAdmins = async () => {
     setLoading(true);
@@ -111,8 +122,8 @@ export default function ManageUsersPage() {
     fetchAdmins();
   }, []);
 
-  const handleOpenProfile = (user: SuperAdminUser) => {
-    setSelectedProfileUser(user);
+  const handleOpenProfile = (targetUser: SuperAdminUser) => {
+    setSelectedProfileUser(targetUser);
     setIsProfileOpen(true);
   };
 
@@ -131,8 +142,7 @@ export default function ManageUsersPage() {
     setLogsName(name);
   };
 
-  const handleEditPermissions = (User: SuperAdminUser) => {
-    console.log("User permissions:", user?.permissions);
+  const handleEditPermissions = (targetUser: SuperAdminUser) => {
     const canManagePermissions =
       user?.permissions.includes("users_management") ||
       user?.permissions.includes("modify_user_permissions") ||
@@ -142,7 +152,7 @@ export default function ManageUsersPage() {
       showAccessDeniedToast();
       return;
     }
-    setSelectedPermissionsUser(User);
+    setSelectedPermissionsUser(targetUser);
     setIsPermissionsOpen(true);
   };
 
@@ -502,11 +512,18 @@ export default function ManageUsersPage() {
                     {selectedPermissionIds.length > 0 && (
                       <button
                         onClick={() => setSelectedPermissionIds([])}
-                        className="text-[10px] text-rose-500 hover:underline font-bold"
+                        className="text-[10px] text-indigo-500 hover:underline font-bold"
                       >
                         Clear
                       </button>
                     )}
+
+                    <button
+                      onClick={() => setIsFilterDropdownOpen(false)}
+                      className="text-[10px] text-rose-500 hover:underline font-bold"
+                    >
+                      Close
+                    </button>
                   </div>
 
                   {/* Hierarchical Tree Render */}

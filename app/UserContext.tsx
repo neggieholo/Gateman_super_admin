@@ -11,7 +11,11 @@ import React, {
 } from "react";
 // import { io, Socket } from 'socket.io-client';
 // import localforage from 'localforage';
-import { EstatesListRow, notification, UserContextType } from "./services/types";
+import {
+  EstatesListRow,
+  notification,
+  UserContextType,
+} from "./services/types";
 import { User } from "./services/types";
 import { fetchNotifications } from "./services/apis";
 import { io, Socket } from "socket.io-client";
@@ -43,7 +47,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [estatesList, setEstatesList] = useState<EstatesListRow[]>([]);
-  const [isLoading, setIsLoading] = useState(false);  
+  const [isLoading, setIsLoading] = useState(false);
   const [notifications, setNotifications] = useState<notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const socketRef = useRef<Socket | null>(null);
@@ -80,44 +84,47 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     getNotifications();
   }, [user, refreshTrigger]);
 
-   useEffect(() => {
-     if (!user) {
-       if (socketRef.current) {
-         console.log("🔌 User logged out. Disconnecting socket...");
-         socketRef.current.disconnect();
-         socketRef.current = null;
-         setIsConnected(false);
-       }
-       return;
-     }
+  useEffect(() => {
+    console.log("Estates List from user context", estatesList);
+  }, [estatesList]);
 
-     console.log("⚡ User session detected. Initializing socket connection...");
+  useEffect(() => {
+    if (!user) {
+      if (socketRef.current) {
+        console.log("🔌 User logged out. Disconnecting socket...");
+        socketRef.current.disconnect();
+        socketRef.current = null;
+        setIsConnected(false);
+      }
+      return;
+    }
 
-     const newSocket = io(baseUrl, {
-       path: "/api/socket.io",
-       transports: ["websocket", "polling"],
-       withCredentials: true,
-     });
+    console.log("⚡ User session detected. Initializing socket connection...");
 
-     newSocket.on("connect", () => {
-       setIsConnected(true);
-       console.log("✅ Socket Connected via Session ID");
-     });
+    const newSocket = io(baseUrl, {
+      path: "/api/socket.io",
+      transports: ["websocket", "polling"],
+      withCredentials: true,
+    });
 
-     newSocket.on("new_notification", () => {
-       triggerRefresh();
-     });
+    newSocket.on("connect", () => {
+      setIsConnected(true);
+      console.log("✅ Socket Connected via Session ID");
+    });
 
-     socketRef.current = newSocket;
+    newSocket.on("new_notification", () => {
+      triggerRefresh();
+    });
 
-     return () => {
-       newSocket.off("new_notification");
-       newSocket.off("guard_location_update");
-       newSocket.close();
-       socketRef.current = null;
-     };
-   }, [baseUrl, user]);
+    socketRef.current = newSocket;
 
+    return () => {
+      newSocket.off("new_notification");
+      newSocket.off("guard_location_update");
+      newSocket.close();
+      socketRef.current = null;
+    };
+  }, [baseUrl, user]);
 
   return (
     <UserContext.Provider

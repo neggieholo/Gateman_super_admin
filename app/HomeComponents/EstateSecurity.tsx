@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @next/next/no-img-element */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   deleteGlobalResidentAccount,
   getAllSecurityUsers,
@@ -10,12 +11,19 @@ import {
 
 import { fetchReadableAddress, getRelativeTime } from "../services/apis";
 import toast from "react-hot-toast";
-import { History, X, ShieldAlert, Trash2 } from "lucide-react";
+import { History, X, ShieldAlert, Trash2, ArrowUpDown } from "lucide-react";
 import SecurityActionWarningModal from "./SecurityActionWarningModal";
-import { SecurityUser } from "../services/types";
+import {
+  ActivityFilterType,
+  SecurityUser,
+  ALPHABET,
+  SortField,
+  SortOrder,
+} from "../services/types";
 import { useUser } from "../UserContext";
 import { showAccessDeniedToast } from "./ManageUsersPage";
 import AuditLogsPage from "./AuditLogs";
+import { useSearchParams } from "next/navigation";
 
 interface SecurityPersonnelPageProps {
   estateId?: string;
@@ -52,6 +60,14 @@ export default function SecurityPersonnelPage({
   );
   const [viewAllLogs, setViewAllLogs] = useState(false);
   const [viewIndividualLogs, setViewIndividualLogs] = useState(false);
+  const searchParams = useSearchParams();
+  const initialActivityRef = useRef(searchParams.get("activity"));
+  const initialStatusRef = useRef(searchParams.get("duty_status"));
+  const [activityFilter, setActivityFilter] =
+    useState<ActivityFilterType>("all");
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(null);
+  const [alphaFilter, setAlphaFilter] = useState<string>("ALL");
 
   // Destructive Action Protection States
   const [actionLoading, setActionLoading] = useState(false);
@@ -74,6 +90,28 @@ export default function SecurityPersonnelPage({
     user?.permissions.includes("estates_management") ||
     user?.permissions.includes("view_estate_security") ||
     user?.permissions.includes("all-access");
+
+  const handleSort = (field: SortField) => {
+    if (sortField !== field) {
+      setSortField(field);
+      setSortOrder("asc");
+    } else if (sortOrder === "asc") {
+      setSortOrder("desc");
+    } else if (sortOrder === "desc") {
+      setSortField(null);
+      setSortOrder(null);
+    }
+  };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field || !sortOrder)
+      return <span className="text-slate-900 ml-1">↕</span>;
+    return sortOrder === "asc" ? (
+      <span className="ml-1 text-slate-900">↑</span>
+    ) : (
+      <span className="ml-1 text-slate-900">↓</span>
+    );
+  };
 
   useEffect(() => {
     if (selectedGuard?.last_known_location) {
@@ -120,6 +158,23 @@ export default function SecurityPersonnelPage({
           : await getEstateSecurityUsers(estateId);
         if (res.success) {
           setGuards(res.securityUsers || []);
+          if (initialActivityRef.current) {
+            setActivityFilter("30m");
+            window.history.replaceState(
+              { ...window.history.state },
+              "",
+              window.location.pathname,
+            );
+            initialActivityRef.current = null;
+          } else if (initialStatusRef) {
+            setDutyFilter("on_duty");
+            window.history.replaceState(
+              { ...window.history.state },
+              "",
+              window.location.pathname,
+            );
+            initialStatusRef.current = null;
+          }
         } else {
           toast.error(
             res.message || "Failed to load estate security registry profiles.",
@@ -138,22 +193,98 @@ export default function SecurityPersonnelPage({
     if (all || estateId) {
       loadSecurityWorkforce();
     }
-  }, [estateId, all]);
+  }, [estateId, all, canViewSecurity]);
 
-  const filteredGuards = guards.filter((guard) => {
-    if (dutyFilter === "on_duty" && !guard.is_on_duty) return false;
-    if (dutyFilter === "off_duty" && guard.is_on_duty) return false;
+  const isWithinActivityWindow = (
+    timestamp?: string,
+    filter: ActivityFilterType = "all",
+  ): boolean => {
+    if (filter === "all" || !timestamp) return true;
+    const activityDate = new Date(timestamp).getTime();
+    const now = Date.now();
+    const diffMs = now - activityDate;
 
-    if (searchTerm.trim() !== "") {
-      const matchQuery = searchTerm.toLowerCase();
-      return (
-        guard.name.toLowerCase().includes(matchQuery) ||
-        guard.email.toLowerCase().includes(matchQuery) ||
-        (guard.phone && guard.phone.toLowerCase().includes(matchQuery))
-      );
+    const MINUTE = 60 * 1000;
+    const HOUR = 60 * MINUTE;
+    const DAY = 24 * HOUR;
+
+    switch (filter) {
+      case "30m":
+        return diffMs <= 30 * MINUTE;
+      case "1d":
+        return diffMs <= 1 * DAY;
+      case "1w":
+        return diffMs <= 7 * DAY;
+      case "1m":
+        return diffMs <= 30 * DAY;
+      case "6m":
+        return diffMs <= 180 * DAY;
+      case "1y":
+        return diffMs <= 365 * DAY;
+      case "over-1y":
+        return diffMs > 365 * DAY;
+      default:
+        return true;
     }
-    return true;
-  });
+  };
+
+  // Combined Filtering and Sorting Pipeline
+  const processedGuards = guards
+    .filter((guard) => {
+      // Duty Filter
+      if (dutyFilter === "on_duty" && !guard.is_on_duty) return false;
+      if (dutyFilter === "off_duty" && guard.is_on_duty) return false;
+
+      // Alphabet Filter
+      if (alphaFilter !== "ALL") {
+        const firstChar = guard.name?.trim().charAt(0).toUpperCase();
+        if (firstChar !== alphaFilter) return false;
+      }
+
+      // Activity Time Filter
+      const latestTimestamp =
+        guard.last_checkin || guard.last_activity_at || guard.last_checkout;
+      if (!isWithinActivityWindow(latestTimestamp, activityFilter)) {
+        return false;
+      }
+
+      // Search Term Filter
+      if (searchTerm.trim() !== "") {
+        const query = searchTerm.toLowerCase();
+        return (
+          guard.name.toLowerCase().includes(query) ||
+          guard.email.toLowerCase().includes(query) ||
+          (guard.phone && guard.phone.toLowerCase().includes(query))
+        );
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      if (!sortField || !sortOrder) return 0;
+
+      const valA: unknown =
+        sortField in a ? a[sortField as keyof SecurityUser] : "";
+      const valB: unknown =
+        sortField in b ? b[sortField as keyof SecurityUser] : "";
+
+      if (sortField === "created_at") {
+        const timeA =
+          typeof valA === "string" || typeof valA === "number"
+            ? new Date(valA).getTime()
+            : 0;
+        const timeB =
+          typeof valB === "string" || typeof valB === "number"
+            ? new Date(valB).getTime()
+            : 0;
+        return sortOrder === "asc" ? timeA - timeB : timeB - timeA;
+      }
+
+      const comparison = String(valA)
+        .toLowerCase()
+        .localeCompare(String(valB).toLowerCase());
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
 
   const totalGuardsCount = guards.length;
   const onDutyCount = guards.filter((g) => g.is_on_duty).length;
@@ -386,9 +517,26 @@ export default function SecurityPersonnelPage({
                   Live Force Registry Ledger
                 </span>
                 <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-mono">
-                  Showing {filteredGuards.length} Guards
+                  Showing {processedGuards.length} Guards
                 </span>
               </div>
+
+              <select
+                value={activityFilter}
+                onChange={(e) =>
+                  setActivityFilter(e.target.value as ActivityFilterType)
+                }
+                className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-slate-100 text-slate-700 border border-slate-200 focus:outline-none transition-all"
+              >
+                <option value="all">All Activity Times</option>
+                <option value="30m">Last 30 Mins</option>
+                <option value="1d">Last 24 Hours</option>
+                <option value="1w">Last 7 Days</option>
+                <option value="1m">Last 30 Days</option>
+                <option value="6m">Last 6 Months</option>
+                <option value="1y">Last 1 Year</option>
+                <option value="over-1y">Over 1 Year</option>
+              </select>
 
               <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <div className="bg-slate-100 p-1 rounded-xl flex items-center shrink-0">
@@ -425,32 +573,72 @@ export default function SecurityPersonnelPage({
             </div>
 
             <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 max-h-120.5 scrollbar-thin">
-              {filteredGuards.length === 0 ? (
-                <div className="py-20 text-center">
-                  <p className="text-xs font-bold text-slate-400">
-                    No security officers match the given search criteria.
-                  </p>
-                </div>
-              ) : (
-                <table className="w-full text-left border-collapse relative">
-                  <thead className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-wider sticky top-0 z-10 shadow-sm border-b border-slate-100">
+              <table className="w-full text-left border-collapse relative">
+                <thead className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-wider sticky top-0 z-10 shadow-sm border-b border-slate-100">
+                  <tr>
+                    <th className="py-3 px-4 bg-slate-50">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleSort("name")}
+                          className="flex items-center gap-1 hover:text-slate-700 transition-colors cursor-pointer"
+                        >
+                          <span>Resident profile</span>
+                          {renderSortIcon("name")}
+                        </button>
+
+                        <select
+                          value={alphaFilter}
+                          onChange={(e) => setAlphaFilter(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-slate-100 text-slate-600 border border-slate-200 focus:outline-none cursor-pointer"
+                        >
+                          <option value="ALL">A-Z All</option>
+                          {ALPHABET.map((char) => (
+                            <option key={char} value={char}>
+                              {char}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </th>
+                    <th className="py-3 px-4 bg-slate-50">
+                      Operational Status
+                    </th>
+                    <th
+                      onClick={() => handleSort("email")}
+                      className="py-3 px-4 bg-slate-50 cursor-pointer select-none hover:text-slate-700 transition-colors"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Contact Points</span>
+                        {/* {renderSortIcon("email")} */}
+                      </div>
+                    </th>
+                    {all && <th className="py-3 px-4 bg-slate-50">Estate</th>}
+                    <th className="py-3 px-4 bg-slate-50">
+                      Last Shift Milestone
+                    </th>
+                    <th
+                      onClick={() => handleSort("created_at")}
+                      className="py-3 px-4 bg-slate-50 text-right cursor-pointer select-none hover:text-slate-700 transition-colors"
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        <span>Onboarded</span>
+                        {renderSortIcon("created_at")}
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 text-xs font-medium text-slate-600">
+                  {processedGuards.length === 0 ? (
                     <tr>
-                      <th className="py-3 px-4 bg-slate-50">Personnel</th>
-                      <th className="py-3 px-4 bg-slate-50">
-                        Operational Status
-                      </th>
-                      <th className="py-3 px-4 bg-slate-50">Contact Points</th>
-                      {all && <th className="py-3 px-4 bg-slate-50">Estate</th>}
-                      <th className="py-3 px-4 bg-slate-50">
-                        Last Shift Milestone
-                      </th>
-                      <th className="py-3 px-4 bg-slate-50 text-right">
-                        Onboarded
-                      </th>
+                      <td colSpan={all ? 7 : 6} className="py-20 text-center">
+                        <p className="text-xs font-bold text-slate-400">
+                          No security officers match the given search criteria.
+                        </p>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 text-xs font-medium text-slate-600">
-                    {filteredGuards.map((guard) => (
+                  ) : (
+                    processedGuards.map((guard) => (
                       <tr
                         key={guard.id}
                         onClick={() => handleOpenDetails(guard)}
@@ -553,10 +741,10 @@ export default function SecurityPersonnelPage({
                             : "---"}
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </>
@@ -635,7 +823,7 @@ export default function SecurityPersonnelPage({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">
-                      Email ID Reference
+                      Email
                     </label>
                     <p className="bg-slate-50 border border-slate-100 text-slate-800 text-xs font-semibold px-3 py-2 rounded-xl truncate select-all">
                       {selectedGuard.email}
@@ -648,6 +836,28 @@ export default function SecurityPersonnelPage({
                     <p className="bg-slate-50 border border-slate-100 text-slate-800 text-xs font-semibold px-3 py-2 rounded-xl select-all">
                       {selectedGuard.phone || "No Number"}
                     </p>
+                  </div>
+                </div>
+
+                <div className="p-2">
+                  <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-2">
+                    Attached to
+                  </label>
+                  <div className="space-y-3 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
+                    <div className="flex items-center justify-between mb-2">
+                      {(() => {
+                        const mappedEstate = estatesList.find(
+                          (estate) => estate.id === selectedGuard.estate_id,
+                        );
+                        return (
+                          <span
+                            className={`text-[10px] text-slate-800 font-black uppercase tracking-tight`}
+                          >
+                            {mappedEstate?.name}
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
 
@@ -687,74 +897,6 @@ export default function SecurityPersonnelPage({
                     </div>
                   </div>
                 </div>
-
-                {/* Verified KYC Identification Section */}
-                {/* <div className="space-y-2">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
-                    Verified Identification Ledger (
-                    {selectedGuard.id_type || "No ID Type Specified"})
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <span className="text-[9px] text-slate-400 font-medium block mb-1">
-                        ID Card Front Page
-                      </span>
-                      {selectedGuard.id_front_url ? (
-                        <div
-                          onClick={() =>
-                            openImageExpanded(selectedGuard.id_front_url!)
-                          }
-                          className="relative h-24 bg-slate-100 border border-slate-200 rounded-xl overflow-hidden cursor-zoom-in group"
-                        >
-                          <img
-                            src={selectedGuard.id_front_url}
-                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                            alt="Front ID"
-                          />
-                          <div className="absolute inset-0 bg-slate-900/10 group-hover:bg-slate-900/0 transition-colors flex items-center justify-center">
-                            <Eye
-                              size={16}
-                              className="text-white drop-shadow-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="h-24 bg-slate-50 border border-dashed border-slate-200 rounded-xl flex items-center justify-center text-[11px] italic text-slate-400">
-                          Not Uploaded
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <span className="text-[9px] text-slate-400 font-medium block mb-1">
-                        ID Card Reverse Page
-                      </span>
-                      {selectedGuard.id_back_url ? (
-                        <div
-                          onClick={() =>
-                            openImageExpanded(selectedGuard.id_back_url!)
-                          }
-                          className="relative h-24 bg-slate-100 border border-slate-200 rounded-xl overflow-hidden cursor-zoom-in group"
-                        >
-                          <img
-                            src={selectedGuard.id_back_url}
-                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                            alt="Back ID"
-                          />
-                          <div className="absolute inset-0 bg-slate-900/10 group-hover:bg-slate-900/0 transition-colors flex items-center justify-center">
-                            <Eye
-                              size={16}
-                              className="text-white drop-shadow-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="h-24 bg-slate-50 border border-dashed border-slate-200 rounded-xl flex items-center justify-center text-[11px] italic text-slate-400">
-                          Not Uploaded
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div> */}
               </div>
 
               <div className="w-full p-3 flex justify-center">

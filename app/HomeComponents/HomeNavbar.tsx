@@ -7,7 +7,8 @@ import { checkSession } from "../services/apis";
 // import Link from 'next/link';
 
 const HomeNavbar = () => {
-  const { user, setUser, isLoading, setIsLoading, badgeCount } = useUser();
+  const { user, setUser, isLoading, setIsLoading, setEstatesList, badgeCount } =
+    useUser();
   const router = useRouter();
 
   const [mounted, setMounted] = useState(false);
@@ -25,6 +26,7 @@ const HomeNavbar = () => {
           window.location.replace("/");
         } else {
           setUser(res.user);
+          setEstatesList(res.estatesList);
           setIsLoading(false);
         }
       } catch (err) {

@@ -186,6 +186,7 @@ export default function Auth() {
 
       if (data.success) {
         setUser(data.user);
+        console.log("Estates List from auth:", data.estatesList)
         setEstatesList(data.estatesList);
         router.push("/home/dashboard");
         setShowOtpInput(false);

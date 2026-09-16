@@ -1,15 +1,22 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @next/next/no-img-element */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   getAllResidents,
   getEstateResidents,
 } from "../services/apis_residents";
-import { getRelativeTime } from "../services/apis";
+import { getRelativeTime, formatLastActivity } from "../services/apis";
 import toast from "react-hot-toast";
 import { History, X, ShieldAlert, Trash2 } from "lucide-react";
-import { EstatesListRow, Resident } from "../services/types";
+import {
+  ActivityFilterType,
+  ALPHABET,
+  EstatesListRow,
+  Resident,
+  SortField,
+  SortOrder,
+} from "../services/types";
 import SecurityActionWarningModal from "./SecurityActionWarningModal";
 import {
   deleteGlobalResidentAccount,
@@ -18,6 +25,7 @@ import {
 import { useUser } from "../UserContext";
 import { showAccessDeniedToast } from "./ManageUsersPage";
 import AuditLogsPage from "./AuditLogs";
+import { useSearchParams } from "next/navigation";
 
 interface ResidentsOverviewPageProps {
   estateId?: string;
@@ -39,6 +47,8 @@ export default function ResidentsOverviewPage({
   const [estatesMap, setEstatesMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const searchParams = useSearchParams();
+  const initialActivityRef = useRef(searchParams.get("activity"));
   const [accountTypeFilter, setAccountTypeFilter] =
     useState<AccountFilterType>("all");
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -49,6 +59,11 @@ export default function ResidentsOverviewPage({
 
   const [viewAllLogs, setViewAllLogs] = useState(false);
   const [viewIndividualLogs, setViewIndividualLogs] = useState(false);
+  const [activityFilter, setActivityFilter] =
+    useState<ActivityFilterType>("all");
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(null);
+  const [alphaFilter, setAlphaFilter] = useState<string>("ALL");
 
   // Destructive Action Protection States
   const [actionLoading, setActionLoading] = useState(false);
@@ -96,6 +111,20 @@ export default function ResidentsOverviewPage({
             });
             setEstatesMap(lookupContainer);
           }
+
+          if (initialActivityRef.current) {
+            if (initialActivityRef.current === "30m") {
+              setActivityFilter("30m");
+            } else {
+              setActivityFilter("1m");
+            }
+            window.history.replaceState(
+              { ...window.history.state },
+              "",
+              window.location.pathname,
+            );
+            initialActivityRef.current = null;
+          }
         } else {
           toast.error(
             res.message || "Failed to sync resident ledger logs map.",
@@ -112,23 +141,129 @@ export default function ResidentsOverviewPage({
     if (all || estateId) {
       loadResidentsData();
     }
-  }, [estateId, all, canViewResidents]);
+  }, [estateId, all, canViewResidents, estatesList]);
 
-  // Filter list records against type filter and search query string parameters
-  const filteredResidents = residents.filter((res) => {
-    if (accountTypeFilter === "main" && res.parent_account_id) return false;
-    if (accountTypeFilter === "sub" && !res.parent_account_id) return false;
-
-    if (searchTerm.trim() !== "") {
-      const matchQuery = searchTerm.toLowerCase();
-      return (
-        res.name.toLowerCase().includes(matchQuery) ||
-        res.email.toLowerCase().includes(matchQuery) ||
-        (res.phone && res.phone.toLowerCase().includes(matchQuery))
-      );
+  const handleSort = (field: SortField) => {
+    if (sortField !== field) {
+      setSortField(field);
+      setSortOrder("asc");
+    } else if (sortOrder === "asc") {
+      setSortOrder("desc");
+    } else if (sortOrder === "desc") {
+      setSortField(null);
+      setSortOrder(null);
     }
-    return true;
-  });
+  };
+
+  // Sort Indicator Helper
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field || !sortOrder)
+      return <span className="text-slate-900 ml-1">↕</span>;
+    return sortOrder === "asc" ? (
+      <span className="ml-1 text-slate-900">↑</span>
+    ) : (
+      <span className="ml-1 text-slate-900">↓</span>
+    );
+  };
+  // Filter list records against type filter and search query string parameters
+  // 1. Multi-Stage Filter & Sorting Pipeline
+  const processedResidents = useMemo(() => {
+    return residents
+      .filter((res) => {
+        // Account Type Filter
+        if (accountTypeFilter === "main" && res.parent_account_id) return false;
+        if (accountTypeFilter === "sub" && !res.parent_account_id) return false;
+
+        // Activity Range Filter
+        if (activityFilter !== "all") {
+          if (!res.last_activity_at) return false;
+
+          const diffMs = Date.now() - new Date(res.last_activity_at).getTime();
+          const DAY_1_MS = 24 * 60 * 60 * 1000;
+
+          switch (activityFilter) {
+            case "30m":
+              if (diffMs > 30 * 60 * 1000) return false;
+              break;
+            case "1d":
+              if (diffMs > DAY_1_MS) return false;
+              break;
+            case "1w":
+              if (diffMs > 7 * DAY_1_MS) return false;
+              break;
+            case "1m":
+              if (diffMs > 30 * DAY_1_MS) return false;
+              break;
+            case "6m":
+              if (diffMs > 180 * DAY_1_MS) return false;
+              break;
+            case "1y":
+              if (diffMs > 365 * DAY_1_MS) return false;
+              break;
+            case "over-1y":
+              if (diffMs <= 365 * DAY_1_MS) return false;
+              break;
+          }
+        }
+
+        // Alphabetical Jump Filter
+        if (alphaFilter !== "ALL") {
+          const firstChar = res.name?.trim().charAt(0).toUpperCase();
+          if (firstChar !== alphaFilter) return false;
+        }
+
+        // Search Term Query Matching
+        if (searchTerm.trim() !== "") {
+          const matchQuery = searchTerm.toLowerCase();
+          return (
+            res.name?.toLowerCase().includes(matchQuery) ||
+            res.email?.toLowerCase().includes(matchQuery) ||
+            (res.phone && res.phone.toLowerCase().includes(matchQuery))
+          );
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        // ... inside .sort((a, b) => {
+        if (!sortField || !sortOrder) return 0;
+
+        // Type-safe property access using keyof Resident or fallback
+        let aVal: unknown =
+          sortField in a ? a[sortField as keyof Resident] : "";
+        let bVal: unknown =
+          sortField in b ? b[sortField as keyof Resident] : "";
+
+        // Handle nested or derived field sorting
+        if (sortField === "created_at" || sortField === "last_activity") {
+          aVal =
+            typeof aVal === "string" || typeof aVal === "number"
+              ? new Date(aVal).getTime()
+              : 0;
+          bVal =
+            typeof bVal === "string" || typeof bVal === "number"
+              ? new Date(bVal).getTime()
+              : 0;
+        } else if (typeof aVal === "string") {
+          aVal = aVal.toLowerCase();
+          bVal = typeof bVal === "string" ? bVal.toLowerCase() : "";
+        }
+
+        if ((aVal as string | number) < (bVal as string | number))
+          return sortOrder === "asc" ? -1 : 1;
+        if ((aVal as string | number) > (bVal as string | number))
+          return sortOrder === "asc" ? 1 : -1;
+        return 0;
+      });
+  }, [
+    residents,
+    accountTypeFilter,
+    activityFilter,
+    alphaFilter,
+    searchTerm,
+    sortField,
+    sortOrder,
+  ]);
 
   // Calculate quick metrics summaries
   const totalResidentsCount = residents.length;
@@ -378,9 +513,26 @@ export default function ResidentsOverviewPage({
                   Live Account Registry Ledger
                 </span>
                 <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-mono">
-                  Showing {filteredResidents.length} Residents
+                  Showing {processedResidents.length} Residents
                 </span>
               </div>
+
+              <select
+                value={activityFilter}
+                onChange={(e) =>
+                  setActivityFilter(e.target.value as ActivityFilterType)
+                }
+                className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-slate-100 text-slate-700 border border-slate-200 focus:outline-none transition-all"
+              >
+                <option value="all">All Activity Times</option>
+                <option value="30m">Last 30 Mins</option>
+                <option value="1d">Last 24 Hours</option>
+                <option value="1w">Last 7 Days</option>
+                <option value="1m">Last 30 Days</option>
+                <option value="6m">Last 6 Months</option>
+                <option value="1y">Last 1 Year</option>
+                <option value="over-1y">Over 1 Year</option>
+              </select>
 
               <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <div className="bg-slate-100 p-1 rounded-xl flex items-center shrink-0">
@@ -429,35 +581,96 @@ export default function ResidentsOverviewPage({
             </div>
 
             <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 scrollbar-thin">
-              {filteredResidents.length === 0 ? (
-                <div className="py-20 text-center">
-                  <p className="text-xs font-bold text-slate-400">
-                    No matching tenant accounts discovered.
-                  </p>
-                </div>
-              ) : (
-                <table className="w-full text-left border-collapse relative">
-                  <thead className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-wider sticky top-0 z-10 shadow-sm border-b border-slate-100">
+              <table className="w-full text-left border-collapse relative">
+                <thead className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-wider sticky top-0 z-10 shadow-sm border-b border-slate-100">
+                  <tr>
+                    {/* Resident Profile Header with Alphabet Selector */}
+                    <th className="py-3 px-4 bg-slate-50">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSort("name")}
+                          className="flex items-center gap-1 hover:text-slate-700 transition-colors cursor-pointer"
+                        >
+                          <span>Resident profile</span>
+                          {renderSortIcon("name")}
+                        </button>
+
+                        <select
+                          value={alphaFilter}
+                          onChange={(e) => setAlphaFilter(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-slate-100 text-slate-600 border border-slate-200 focus:outline-none cursor-pointer"
+                        >
+                          <option value="ALL">A-Z All</option>
+                          {ALPHABET.map((char) => (
+                            <option key={char} value={char}>
+                              {char}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </th>
+
+                    {/* Contact Header */}
+                    <th
+                      // onClick={() => handleSort("email")}
+                      className="py-3 px-4 bg-slate-50 cursor-pointer hover:text-slate-700 transition-colors"
+                    >
+                      {/* Contact {renderSortIcon("email")} */}
+                    </th>
+
+                    {/* Account Type Header */}
+                    <th
+                      // onClick={() => handleSort("account")}
+                      className="py-3 px-4 bg-slate-50 cursor-pointer hover:text-slate-700 transition-colors"
+                    >
+                      {/* Account Type {renderSortIcon("account")} */}
+                      Account Type
+                    </th>
+
+                    {/* Registered Estates Header */}
+                    <th
+                      // onClick={() => handleSort("estates_count")}
+                      className="py-3 px-4 bg-slate-50 cursor-pointer hover:text-slate-700 transition-colors"
+                    >
+                      {/* Registered Estates {renderSortIcon("estates_count")} */}
+                      Registered Estates
+                    </th>
+
+                    {all && (
+                      <th className="py-3 px-4 bg-slate-50">Estate(s)</th>
+                    )}
+
+                    {/* Last Activity Header */}
+                    <th
+                      // onClick={() => handleSort("last_activity")}
+                      className="py-3 px-4 bg-slate-50 cursor-pointer hover:text-slate-700 transition-colors"
+                    >
+                      {/* Last Activity {renderSortIcon("last_activity")} */}
+                      Last Activity
+                    </th>
+
+                    {/* Onboarded Header */}
+                    <th
+                      onClick={() => handleSort("created_at")}
+                      className="py-3 px-4 bg-slate-50 text-right cursor-pointer hover:text-slate-700 transition-colors"
+                    >
+                      Onboarded {renderSortIcon("created_at")}
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-50 text-xs font-medium text-slate-600">
+                  {processedResidents.length === 0 ? (
                     <tr>
-                      <th className="py-3 px-4 bg-slate-50">
-                        Resident profile
-                      </th>
-                      <th className="py-3 px-4 bg-slate-50">Contact</th>
-                      <th className="py-3 px-4 bg-slate-50">Account Type</th>
-                      <th className="py-3 px-4 bg-slate-50">
-                        Registered Estates
-                      </th>
-                      {all && (
-                        <th className="py-3 px-4 bg-slate-50">Estate(s)</th>
-                      )}
-                      <th className="py-3 px-4 bg-slate-50">Last Activity</th>
-                      <th className="py-3 px-4 bg-slate-50 text-right">
-                        Onboarded
-                      </th>
+                      <td colSpan={all ? 7 : 6} className="py-20 text-center">
+                        <p className="text-xs font-bold text-slate-400">
+                          No matching tenant accounts discovered.
+                        </p>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 text-xs font-medium text-slate-600">
-                    {filteredResidents.map((resident) => (
+                  ) : (
+                    processedResidents.map((resident) => (
                       <tr
                         key={resident.id}
                         onClick={() => handleOpenDetails(resident)}
@@ -480,7 +693,9 @@ export default function ResidentsOverviewPage({
                                 />
                               ) : (
                                 <span className="text-[10px] font-black text-slate-500 uppercase">
-                                  {resident.name.substring(0, 2)}
+                                  {resident.name
+                                    ? resident.name.substring(0, 2)
+                                    : "--"}
                                 </span>
                               )}
                             </div>
@@ -539,7 +754,7 @@ export default function ResidentsOverviewPage({
                         <td className="py-3.5 px-4">
                           <p className="text-slate-700 text-[11px]">
                             {resident.last_activity_at
-                              ? `Active ${getRelativeTime(resident.last_activity_at)}`
+                              ? `Active ${formatLastActivity(resident.last_activity_at)}`
                               : "No system metrics"}
                           </p>
                         </td>
@@ -556,10 +771,10 @@ export default function ResidentsOverviewPage({
                             : "---"}
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </>

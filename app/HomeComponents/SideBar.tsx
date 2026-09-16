@@ -62,7 +62,7 @@ export default function SideBar({
       id: ViewState.ADD_USER,
       label: "System Users",
       icon: Users,
-      url: "/home/add_user",
+      url: "/home/system-users",
     },
     {
       id: ViewState.SECURITY,

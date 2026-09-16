@@ -21,7 +21,7 @@ export const checkSession = async (): Promise<sessionResponse> => {
     return data;
   } catch (error) {
     console.error("❌ Session Check Error:", error);
-    return { success: false, user: null };
+    return { success: false, user: null, estatesList:[] };
   }
 };
 
@@ -521,7 +521,7 @@ export async function getS3UploadedUrl(
   const fileName = `upload_${Date.now()}.${fileExtension || "bin"}`;
 
   // 2. FETCH #1: Request presigned URL from backend
-  const urlResponse = await fetch('/api/get-upload-url', {
+  const urlResponse = await fetch("/api/get-upload-url", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -594,4 +594,17 @@ function getFallbackMimeType(ext: string): string {
   };
 
   return mimeMap[ext] || "application/octet-stream";
+}
+
+export function formatLastActivity(lastActivityAt?: string): string {
+  if (!lastActivityAt) return "No system metrics";
+
+  const diffMs = Date.now() - new Date(lastActivityAt).getTime();
+  const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+
+  if (diffMs > ONE_YEAR_MS) {
+    return "Over a year ago";
+  }
+
+  return `Active ${getRelativeTime(lastActivityAt)}`;
 }

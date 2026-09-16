@@ -12,11 +12,11 @@ import {
 import { SYSTEM_PERMISSIONS } from "../services/data";
 import { DashboardAnalyticsPayload } from "../services/types";
 import { getDashboardAnalytics } from "../services/apis_estates";
-import { useUser } from "../UserContext";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 export default function SuperAdminDashboardOverview() {
-  const { user } = useUser();
+  const router = useRouter();
   const [analytics, setAnalytics] = useState<DashboardAnalyticsPayload | null>(
     null,
   );
@@ -111,7 +111,6 @@ export default function SuperAdminDashboardOverview() {
 
   // --- 📊 DYNAMIC PERMISSION STRUCTURAL MATRIX CHART ---
   const permissionDistribution = useMemo(() => {
-    // 1. Map root/parent targets from local config definitions
     const parentKeys = SYSTEM_PERMISSIONS.filter(
       (p) => p.parent_permission === null,
     ).map((p) => p.id);
@@ -126,7 +125,6 @@ export default function SuperAdminDashboardOverview() {
       return { chartMap, totalAllocatedTokens: 0 };
     }
 
-    // 2. Populate values calculated directly by your backend DB optimization loop
     Object.entries(analytics.permissionDistribution.chartMap).forEach(
       ([key, value]) => {
         chartMap[key] = value;
@@ -152,9 +150,6 @@ export default function SuperAdminDashboardOverview() {
 
   return (
     <div className="p-6 space-y-8 bg-slate-50 h-screen max-h-screen overflow-y-auto font-sans text-slate-800">
-      {/* ========================================================================= */}
-      {/* SECTION 1: IDENTITY ACCESS MANAGEMENT (SUPER ADMINS SECTION)              */}
-      {/* ========================================================================= */}
       <div className="p-6 bg-white border border-slate-200/80 rounded-2xl shadow-sm space-y-6">
         <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
           <Shield className="h-5 w-5 text-indigo-600" />
@@ -168,7 +163,10 @@ export default function SuperAdminDashboardOverview() {
         {/* STATS MATRIX SECTION 1 ROW */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* DIV A: Overall User Registry Ratio */}
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+          <div
+            className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between"
+            onClick={() => router.push("/home/system-users")}
+          >
             <div className="space-y-1">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
                 Super Admin Population
@@ -195,7 +193,10 @@ export default function SuperAdminDashboardOverview() {
           </div>
 
           {/* DIV B: Total Real-Time Connected Matrix */}
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+          <div
+            className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between"
+            onClick={() => router.push("/home/security")}
+          >
             <div className="space-y-1">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block font-mono">
                 Telemetry Node Status
@@ -248,7 +249,13 @@ export default function SuperAdminDashboardOverview() {
                     : 0;
 
                 return (
-                  <div key={key} className="space-y-1">
+                  <div
+                    key={key}
+                    className="space-y-1 cursor-pointer"
+                    onClick={() =>
+                      router.push(`/home/system-users?permission_id=${key}`)
+                    }
+                  >
                     <div className="flex justify-between items-center text-[11px] font-medium">
                       <span className="text-slate-700 font-bold max-w-xs truncate">
                         {displayName}
@@ -289,30 +296,36 @@ export default function SuperAdminDashboardOverview() {
           <Building2 className="h-5 w-5 text-emerald-600" />
           <div>
             <h2 className="text-base font-black text-slate-900 tracking-tight uppercase">
-              Ecosystem Telemetry Real-time Matrix
+              Estate ecosystem summary
             </h2>
-            <p className="text-[11px] text-slate-400 font-medium">
+            {/* <p className="text-[11px] text-slate-400 font-medium">
               Property nodes and external edge accounts activity tracking
-            </p>
+            </p> */}
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* DIV A: Managed Infrastructure Totals */}
-          <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-1">
+          <div
+            className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-1"
+            onClick={() => router.push("/home/estates")}
+          >
             <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
-              Property Infrastructure
+              Estates
             </span>
             <p className="text-2xl font-black text-slate-900">
               {ecosystemStats.totalEstates}
             </p>
-            <span className="text-[11px] font-medium text-slate-400 block font-mono">
+            {/* <span className="text-[11px] font-medium text-slate-400 block font-mono">
               COMPUTED ACTIVE NODES ON DISPATCH
-            </span>
+            </span> */}
           </div>
 
           {/* DIV B: Residents Telemetry Shards */}
-          <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
+          <div
+            className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2 cursor-pointer"
+            onClick={() => router.push("/home/estate_residents?activity=30m")}
+          >
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
                 Resident Core Accounts
@@ -329,7 +342,10 @@ export default function SuperAdminDashboardOverview() {
           </div>
 
           {/* DIV C: Gate Guards Security Terminal Shards */}
-          <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
+          <div
+            className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2 cursor-pointer"
+            onClick={() => router.push("/home/estate_guards?activity=30m")}
+          >
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
                 Active Gate Guards Terminals

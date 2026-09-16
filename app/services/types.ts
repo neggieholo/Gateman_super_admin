@@ -107,6 +107,7 @@ export interface UserContextType {
 export interface sessionResponse {
   success: boolean;
   user: User | null;
+  estatesList: EstatesListRow[];
 }
 
 export interface LoginResponse {
@@ -125,37 +126,27 @@ export interface LocationPair {
   unit: string[];
 }
 
-// export interface Invitation {
-//   id: string;
-//   guest_name: string;
-//   guest_phone: string;
-//   guest_image_url: string | null;
-//   access_code: string;
-//   invite_type: "one_time" | "multi_entry" | "staff_entry";
-//   start_date: any;
-//   end_date: any;
-//   start_time: any;
-//   end_time: any;
-//   excluded_dates: string[];
-//   status: string;
-//   actual_checkin: any;
-//   actual_checkout: any;
-//   actual_checkin_date: any;
-//   actual_checkout_date: any;
-//   created_at: string;
-//   is_cancelled: boolean;
-//   resident_name?: string;
-//   locations: {
-//     [estateId: string]: LocationPair[];
-//   };
-//   estate_name?: string;
-//   estate_address?: string;
-//   lga?: string;
-//   town?: string;
-//   staff_position?: string;
-//   permitted_days: number[];
-//   is_activated?: boolean;
-// }
+export type ActivityFilterType =
+  | "all"
+  | "30m"
+  | "1d"
+  | "1w"
+  | "1m"
+  | "6m"
+  | "1y"
+  | "over-1y";
+
+export type SortField =
+  | "name"
+  | "email"
+  | "account"
+  | "estates_count"
+  | "last_activity"
+  | "created_at";
+
+export type SortOrder = "asc" | "desc" | null;
+
+export const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 export interface Invitation {
   id: string;
@@ -821,7 +812,6 @@ export interface PaymentLedgerItem {
   created_at: string;
 }
 
-
 export interface SubscriptionsResponse {
   success: boolean;
   subscriptions: EstateSubscription[];
@@ -839,7 +829,6 @@ export interface ExtensionResponse {
   message: string;
   estate: EstateSubscription;
 }
-
 
 export type DurationTier =
   | "monthly"
@@ -891,4 +880,3 @@ export interface UpdatePricingResponse {
   message: string;
   pricing: SubscriptionPricingConfig;
 }
-

@@ -2,16 +2,20 @@
 
 import React, { useCallback, useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { DashboardEstateNode } from "../services/types";
+import { ALPHABET, DashboardEstateNode, SortOrder } from "../services/types";
 import { getEstatesDashboard } from "../services/apis_estates";
 import EstateDashboardPage from "./EstateDashboardPage";
 import { showAccessDeniedToast } from "./ManageUsersPage";
 import { useUser } from "../UserContext";
 import { Download, MessageSquare } from "lucide-react";
 import { NotifyEstateModal } from "./NotifyEstateModal";
+import { useRouter } from "next/navigation";
+
+type SortField = "name" | "res_count" | "guard_count" | "joined_date";
 
 export default function EstatesManagement() {
   const { user } = useUser();
+  const router = useRouter();
   const [estates, setEstates] = useState<DashboardEstateNode[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEstate, setSelectedEstate] =
@@ -19,6 +23,33 @@ export default function EstatesManagement() {
   const [loading, setLoading] = useState<boolean>(true);
   const [totalEstates, setTotalEstates] = useState<number>(0);
   const [messageModalOpen, setMessageModalOpen] = useState<boolean>(false);
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(null);
+  const [alphaFilter, setAlphaFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+
+  const handleSort = (field: SortField) => {
+    if (sortField !== field) {
+      setSortField(field);
+      setSortOrder("asc");
+    } else if (sortOrder === "asc") {
+      setSortOrder("desc");
+    } else if (sortOrder === "desc") {
+      setSortField(null);
+      setSortOrder(null);
+    }
+  };
+
+  // Sort Indicator Helper
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field || !sortOrder)
+      return <span className="text-slate-400 ml-1">↕</span>;
+    return sortOrder === "asc" ? (
+      <span className="ml-1 text-indigo-600">↑</span>
+    ) : (
+      <span className="ml-1 text-indigo-600">↓</span>
+    );
+  };
 
   const fetchEstates = useCallback(async () => {
     const canViewDEstates =
@@ -52,6 +83,7 @@ export default function EstatesManagement() {
   useEffect(() => {
     fetchEstates();
   }, [fetchEstates]);
+
   const selectEstate = (estate: DashboardEstateNode) => {
     const canViewLogs =
       user?.permissions.includes("estates_management") ||
@@ -65,12 +97,45 @@ export default function EstatesManagement() {
     setSelectedEstate(estate);
   };
 
-  const filteredEstates = estates.filter(
-    (e) =>
+  // Multi-tier filtering (Search, Alphabet, Status)
+  const filteredEstates = estates.filter((e) => {
+    const matchesSearch =
       e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       e.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.estate_code?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+      e.estate_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.lga?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesAlpha =
+      alphaFilter === "ALL" ||
+      e.name.trim().toUpperCase().startsWith(alphaFilter);
+
+    const matchesStatus = statusFilter === "ALL" || e.status === statusFilter;
+
+    return matchesSearch && matchesAlpha && matchesStatus;
+  });
+
+  // Sorting Handler (Supports res_count, guard_count, and joined_date)
+  const sortedEstates = [...filteredEstates].sort((a, b) => {
+    if (!sortField || !sortOrder) return 0;
+
+    let valA: number | string = 0;
+    let valB: number | string = 0;
+
+    if (sortField === "res_count") {
+      valA = Number(a.total_residents) || 0;
+      valB = Number(b.total_residents) || 0;
+    } else if (sortField === "guard_count") {
+      valA = Number(a.total_guards) || 0;
+      valB = Number(b.total_guards) || 0;
+    } else if (sortField === "joined_date") {
+      valA = a.joined_date ? new Date(a.joined_date).getTime() : 0;
+      valB = b.joined_date ? new Date(b.joined_date).getTime() : 0;
+    }
+
+    if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+    if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
 
   const currentPermissions = user?.permissions || [];
   const hasAccessToCurrentPanel =
@@ -79,12 +144,11 @@ export default function EstatesManagement() {
     currentPermissions.includes("estates_management");
 
   const exportToCSV = () => {
-    if (filteredEstates.length === 0) {
+    if (sortedEstates.length === 0) {
       toast.error("No data available to export.");
       return;
     }
 
-    // 1. Calculate Aggregated Metrics
     const activeEstates = estates.filter((e) => e.status === "ACTIVE").length;
     const activeResidents30d = estates.reduce(
       (acc, curr) => acc + (Number(curr.active_residents_30_days) || 0),
@@ -103,7 +167,6 @@ export default function EstatesManagement() {
       0,
     );
 
-    // 2. Format Summary Section
     const summaryRows = [
       ["--- GLOBAL METRICS SUMMARY ---"],
       ["Total Registered Estates", totalEstates],
@@ -112,17 +175,17 @@ export default function EstatesManagement() {
       ["Total Enrolled Residents", totalResidents],
       ["Guards On Duty", guardsOnDuty],
       ["Total Registered Guards", totalGuards],
-      [], // Blank line separator
+      [],
       ["--- ESTATES DIRECTORY LIST ---"],
     ];
 
-    // 3. Format Table Headers & Rows
     const headers = [
       "Estate ID",
       "Estate Name",
       "Code",
       "LGA",
       "State",
+      "Onboarding Date",
       "Active Residents (30d)",
       "Total Residents",
       "Guards On Duty",
@@ -130,12 +193,13 @@ export default function EstatesManagement() {
       "Status",
     ];
 
-    const tableRows = filteredEstates.map((e) => [
+    const tableRows = sortedEstates.map((e) => [
       `"${e.id || ""}"`,
       `"${(e.name || "").replace(/"/g, '""')}"`,
       `"${e.estate_code || ""}"`,
       `"${e.lga || ""}"`,
       `"${e.state || ""}"`,
+      `"${e.joined_date ? new Date(e.joined_date).toLocaleDateString() : "N/A"}"`,
       e.active_residents_30_days || 0,
       e.total_residents || 0,
       e.guards_on_duty || 0,
@@ -143,7 +207,6 @@ export default function EstatesManagement() {
       `"${e.status || ""}"`,
     ]);
 
-    // 4. Combine into Single CSV Payload
     const fullCsvArray = [
       ...summaryRows.map((r) => r.join(",")),
       headers.join(","),
@@ -151,7 +214,6 @@ export default function EstatesManagement() {
     ];
 
     const csvContent = "data:text/csv;charset=utf-8," + fullCsvArray.join("\n");
-
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -174,10 +236,9 @@ export default function EstatesManagement() {
 
   return (
     <div className="p-2 bg-slate-50 h-[calc(100vh-110px)] text-slate-800 font-sans flex flex-col overflow-hidden">
-      {/* 📊 High-Level Global Metrics Banner (Driven by Database Aggregates) */}
       {!selectedEstate && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 shrink-0">
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 cursor-not-allowed">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Registered Estates
             </p>
@@ -188,7 +249,10 @@ export default function EstatesManagement() {
               </span>
             </p>
           </div>
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+          <div
+            className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 cursor-pointer"
+            onClick={() => router.push("/home/estate_residents?activity=30d")}
+          >
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Residents (Active last 30 Days)
             </p>
@@ -212,7 +276,12 @@ export default function EstatesManagement() {
               </span>
             </p>
           </div>
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+          <div
+            className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 cursor-pointer"
+            onClick={() =>
+              router.push("/home/estate_guards?duty_status=checked_in")
+            }
+          >
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Security Force Status
             </p>
@@ -243,8 +312,7 @@ export default function EstatesManagement() {
           Querying multi-tenant operational data nodes...
         </div>
       ) : !selectedEstate ? (
-        /* 🏢 DIRECTORY MODULE LIST VIEW CONTAINER */
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col flex-1  animate-in fade-in duration-150 min-h-0">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col flex-1 animate-in fade-in duration-150 min-h-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 shrink-0">
             <div>
               <div className="flex items-center gap-3">
@@ -252,7 +320,7 @@ export default function EstatesManagement() {
                   Estates Directory Nodes
                 </h2>
                 <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-mono">
-                  Showing {filteredEstates.length} Estates
+                  Showing {sortedEstates.length} Estates
                 </span>
               </div>
               <p className="text-xs text-slate-400">
@@ -260,43 +328,87 @@ export default function EstatesManagement() {
                 resident counts and security parameters.
               </p>
             </div>
-            <button
-              onClick={exportToCSV}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Export CSV
-            </button>
-            <button
-              onClick={() => setMessageModalOpen(true)}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              Notify All
-            </button>
-            <input
-              type="text"
-              placeholder="Filter by name, LGA or code..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 w-full sm:w-64"
-            />
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <button
+                onClick={exportToCSV}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </button>
+              <button
+                onClick={() => setMessageModalOpen(true)}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                Notify All
+              </button>
+              <input
+                type="text"
+                placeholder="Filter by name, LGA or code..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 w-full sm:w-64"
+              />
+            </div>
           </div>
 
-          {/* This wrapper limits the height and provides isolated internal scroll */}
           <div className="overflow-auto flex-1 min-h-0 pr-1">
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase bg-slate-50">
-                  <th className="p-3">Estate Parameters</th>
-                  <th className="p-3">Location Context</th>
-                  <th className="p-3">Resident Density</th>
-                  <th className="p-3">Guard Matrix</th>
-                  <th className="p-3">Node Status</th>
+                  <th className="p-3">
+                    Estate Name{" "}
+                    <select
+                      value={alphaFilter}
+                      onChange={(e) => setAlphaFilter(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-slate-100 text-slate-600 border border-slate-200 focus:outline-none cursor-pointer ml-1"
+                    >
+                      <option value="ALL">A-Z All</option>
+                      {ALPHABET.map((char) => (
+                        <option key={char} value={char}>
+                          {char}
+                        </option>
+                      ))}
+                    </select>
+                  </th>
+                  <th className="p-3">Location</th>
+                  <th
+                    className="p-3 cursor-pointer select-none hover:text-slate-600 transition-colors"
+                    onClick={() => handleSort("joined_date")}
+                  >
+                    Onboarding Date {renderSortIcon("joined_date")}
+                  </th>
+                  <th
+                    className="p-3 cursor-pointer select-none hover:text-slate-600 transition-colors"
+                    onClick={() => handleSort("res_count")}
+                  >
+                    Resident Density {renderSortIcon("res_count")}
+                  </th>
+                  <th
+                    className="p-3 cursor-pointer select-none hover:text-slate-600 transition-colors"
+                    onClick={() => handleSort("guard_count")}
+                  >
+                    Guard Density {renderSortIcon("guard_count")}
+                  </th>
+                  <th className="p-3">
+                    Node Status{" "}
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-slate-100 text-slate-600 border border-slate-200 focus:outline-none cursor-pointer ml-1"
+                    >
+                      <option value="ALL">Status: All</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="SUSPENDED">Suspended</option>
+                    </select>
+                  </th>
                 </tr>
               </thead>
               <tbody className="text-xs divide-y divide-slate-50">
-                {filteredEstates.length === 0 ? (
+                {sortedEstates.length === 0 ? (
                   <tr>
                     <td
                       colSpan={6}
@@ -306,7 +418,7 @@ export default function EstatesManagement() {
                     </td>
                   </tr>
                 ) : (
-                  filteredEstates.map((estate) => (
+                  sortedEstates.map((estate) => (
                     <tr
                       key={estate.id}
                       className="hover:bg-indigo-50/30 transition-colors cursor-pointer group"
@@ -324,6 +436,20 @@ export default function EstatesManagement() {
                         <div>{estate.lga}</div>
                         <div className="text-[10px] text-slate-400">
                           {estate.state} State
+                        </div>
+                      </td>
+                      <td className="p-3 font-medium text-slate-600">
+                        <div>
+                          {estate.joined_date
+                            ? new Date(estate.joined_date).toLocaleDateString(
+                                "en-US",
+                                {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                },
+                              )
+                            : "N/A"}
                         </div>
                       </td>
                       <td className="p-3 font-medium text-slate-600">
@@ -362,7 +488,6 @@ export default function EstatesManagement() {
           </div>
         </div>
       ) : (
-        /* 📈 INDIVIDUAL ESTATE PERSONALIZED DASHBOARD CONTAINER */
         <EstateDashboardPage
           estateId={selectedEstate.id}
           onBack={() => setSelectedEstate(null)}
